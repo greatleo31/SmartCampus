@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: smartcampus-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SMARTCAMPUS_DB_URL:jdbc:mysql://localhost:3306/smart_campus?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${SMARTCAMPUS_DB_USERNAME:root}
+    password: ${SMARTCAMPUS_DB_PASSWORD:}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+smart-campus:
+  jwt:
+    secret: ${SMARTCAMPUS_JWT_SECRET}
+    expiration-minutes: ${SMARTCAMPUS_JWT_EXPIRATION_MINUTES:120}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+
+knife4j:
+  enable: true
