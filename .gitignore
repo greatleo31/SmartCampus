@@ -2,6 +2,8 @@
 backend/target/
 frontend/dist/
 frontend/node_modules/
+artifacts/
+output/
 
 # Logs and local env
 *.log

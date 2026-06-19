@@ -23,9 +23,9 @@ mysql -u root -p < sql/data.sql
 
 | 角色 | 用户名 | 密码 |
 | --- | --- | --- |
-| 管理员 | admin | Admin@12345 |
-| 教师 | teacher01 | Teacher@12345 |
-| 学生 | student01 | Student@12345 |
+| 管理员 | admin | 123456 |
+| 教师 | teacher01 | 123456 |
+| 学生 | student01 | 123456 |
 
 ## 后端运行
 

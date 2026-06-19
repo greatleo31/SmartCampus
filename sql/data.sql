@@ -1,9 +1,9 @@
 USE smart_campus;
 
 INSERT INTO sys_user (id, username, password_hash, real_name, user_type) VALUES
-(1, 'admin', '$2b$12$v7u5AnN31bJKRd/9YEMPa.iqwIOomuqBXusAvlqaKzVpqr2cwVaju', '系统管理员', 'ADMIN'),
-(2, 'teacher01', '$2b$12$IAkNQU./US1FyJCqFIEcfuZseBfAYwN4VYwKAPr7mXNiex8V4tgeG', '李老师', 'TEACHER'),
-(3, 'student01', '$2b$12$fh4JmGv9VVrN1/8SErr8su9tZekLBhZP6GnbaKgJgqirkFgNjhLr.', '张同学', 'STUDENT');
+(1, 'admin', '$2a$12$dZN1s4L19YWQ.Ijwe3JYUuisPkotBcbrD8lJUHq3I/nl9J6G1zXEa', '系统管理员', 'ADMIN'),
+(2, 'teacher01', '$2a$12$8jApjdrDWpXo2FFnQHdVw.uW445XZlZ/3e7wDIsI0fB1Ui1o.L/Hq', '李老师', 'TEACHER'),
+(3, 'student01', '$2a$12$2KyDvIa8Es3LIaNvYkGiieqboiA5LxdnkNqtWekHzER05u9LiWv2G', '张同学', 'STUDENT');
 
 INSERT INTO sys_role (id, code, name, data_scope) VALUES
 (1, 'ADMIN', '管理员', 'ALL'),

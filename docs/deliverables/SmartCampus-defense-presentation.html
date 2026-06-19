@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SmartCampus 通用高校教务系统课程设计答辩</title>
+  <style>
+    :root{--bg:#f6f7f9;--surface:#fff;--text:#172033;--muted:#64748b;--accent:#0f766e;--line:#d9e2e1}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:"Microsoft YaHei",system-ui,sans-serif;color:var(--text);overflow:hidden}
+    .deck{position:fixed;left:50%;top:50%;width:1280px;height:720px;transform:translate(-50%,-50%) scale(var(--scale,1));transform-origin:center;background:var(--surface);box-shadow:0 20px 60px rgba(15,23,42,.18);border:1px solid var(--line)}
+    .slide{position:absolute;inset:0;padding:74px 86px;display:none}
+    .slide.active{display:block}
+    .slide:before{content:attr(data-section);position:absolute;left:36px;top:74px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:white;font-size:13px;font-weight:800}
+    .slide:after{content:"";position:absolute;left:53px;top:120px;bottom:74px;width:1px;background:color-mix(in srgb,var(--accent) 35%,transparent)}
+    .kicker{display:inline-flex;padding:5px 12px;border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:999px;color:var(--accent);font-size:13px;font-weight:700;letter-spacing:.04em}
+    h1{margin:34px 0 18px;font-size:54px;line-height:1.1;letter-spacing:0;color:#0f172a}
+    h2{margin:0;max-width:930px;font-size:28px;line-height:1.35;color:var(--muted);font-weight:500}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:54px}
+    .card{min-height:120px;border:1px solid var(--line);border-top:5px solid var(--accent);border-radius:8px;padding:20px;background:#fbfdfd;font-size:23px;line-height:1.45;font-weight:600}
+    .foot{position:absolute;left:86px;right:86px;bottom:26px;display:flex;justify-content:space-between;color:#94a3b8;font-size:13px}
+    .nav{position:fixed;right:24px;bottom:24px;display:flex;gap:8px;z-index:20}
+    button{border:1px solid var(--line);background:white;border-radius:6px;padding:8px 12px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide" data-section="01">
+      <div class="kicker">SmartCampus / 01</div>
+      <h1>SmartCampus 通用高校教务系统</h1>
+      <h2>数据库系统课程设计答辩</h2>
+      <div class="cards"><div class="card">24 软件工程 3 班</div><div class="card">陈志杰 / 段瑞 / 贺宇轩 / 胡衍科</div></div>
+    </section>
+
+    <section class="slide" data-section="02">
+      <div class="kicker">SmartCampus / 02</div>
+      <h1>项目定位</h1>
+      <h2>通用高校教务系统</h2>
+      <div class="cards"><div class="card">管理员、教师、学生三类角色</div><div class="card">教学闭环与学业预警两个亮点</div><div class="card">后端权限与数据范围为准</div></div>
+    </section>
+
+    <section class="slide" data-section="03">
+      <div class="kicker">SmartCampus / 03</div>
+      <h1>业务闭环</h1>
+      <h2>学期 -> 课程 -> 教学班 -> 学生名单 -> 成绩 -> 考勤 -> 预警</h2>
+      <div class="cards"><div class="card">管理员配置基础数据</div><div class="card">教师维护过程数据</div><div class="card">学生只读查看本人数据</div></div>
+    </section>
+
+    <section class="slide" data-section="04">
+      <div class="kicker">SmartCampus / 04</div>
+      <h1>技术架构</h1>
+      <h2>React + Spring Boot + MySQL</h2>
+      <div class="cards"><div class="card">前端：React、TypeScript、Vite、Tailwind、TanStack Query</div><div class="card">后端：Java 17、Spring Security、MyBatis-Plus、Knife4j</div><div class="card">数据库：MySQL 手动导入脚本、索引、视图、逻辑外键</div></div>
+    </section>
+
+    <section class="slide" data-section="05">
+      <div class="kicker">SmartCampus / 05</div>
+      <h1>权限设计</h1>
+      <h2>权限码 + 数据范围</h2>
+      <div class="cards"><div class="card">管理员：全量数据</div><div class="card">教师：本人负责教学班、成绩、考勤、预警</div><div class="card">学生：本人课程、成绩、考勤、预警</div></div>
+    </section>
+
+    <section class="slide" data-section="06">
+      <div class="kicker">SmartCampus / 06</div>
+      <h1>数据库模型</h1>
+      <h2>13 张业务表 + 3 个视图</h2>
+      <div class="cards"><div class="card">sys_user / sys_role / sys_permission</div><div class="card">semester / course / teaching_class / teaching_class_student</div><div class="card">grade_record / attendance_record / academic_warning</div></div>
+    </section>
+
+    <section class="slide" data-section="07">
+      <div class="kicker">SmartCampus / 07</div>
+      <h1>关键约束</h1>
+      <h2>不使用数据库强外键</h2>
+      <div class="cards"><div class="card">通过 unique 保证业务唯一性</div><div class="card">关联字段建立普通索引</div><div class="card">Service 层校验逻辑外键和数据范围</div></div>
+    </section>
+
+    <section class="slide" data-section="08">
+      <div class="kicker">SmartCampus / 08</div>
+      <h1>成绩与预警规则</h1>
+      <h2>总评 = 平时分 40% + 期末分 60%</h2>
+      <div class="cards"><div class="card">总评低于 70 触发低风险</div><div class="card">总评低于 60 或旷课触发更高风险</div><div class="card">旷课、迟到、早退共同影响风险等级</div></div>
+    </section>
+
+    <section class="slide" data-section="09">
+      <div class="kicker">SmartCampus / 09</div>
+      <h1>前端实现</h1>
+      <h2>后台工作台而非营销页</h2>
+      <div class="cards"><div class="card">登录页、仪表盘、管理页、学生只读页</div><div class="card">后端菜单驱动导航显示</div><div class="card">TypeScript 手写类型，不自动生成 client</div></div>
+    </section>
+
+    <section class="slide" data-section="10">
+      <div class="kicker">SmartCampus / 10</div>
+      <h1>验证结果</h1>
+      <h2>构建、测试、SQL 导入均已验证</h2>
+      <div class="cards"><div class="card">mvn test 通过</div><div class="card">npm run type-check / build 通过</div><div class="card">MySQL 空库导入通过</div></div>
+    </section>
+
+    <section class="slide" data-section="11">
+      <div class="kicker">SmartCampus / 11</div>
+      <h1>安全措施</h1>
+      <h2>不信任前端权限</h2>
+      <div class="cards"><div class="card">BCrypt 密码哈希</div><div class="card">JWT 不保存敏感字段</div><div class="card">数据库密码和 JWT 密钥通过环境变量提供</div></div>
+    </section>
+
+    <section class="slide" data-section="12">
+      <div class="kicker">SmartCampus / 12</div>
+      <h1>总结与扩展</h1>
+      <h2>v1 可答辩、可运行、可扩展</h2>
+      <div class="cards"><div class="card">后续可扩展选课、请假审批、排课冲突检测</div><div class="card">预警规则可升级为策略配置</div><div class="card">统计视图可扩展为数据看板</div></div>
+    </section><div class="foot"><span>24 软件工程 3 班</span><span id="page"></span></div></main>
+  <div class="nav"><button onclick="prev()">上一页</button><button onclick="next()">下一页</button></div>
+  <script>
+    const slides=[...document.querySelectorAll('.slide')];let i=0;
+    function render(){slides.forEach((s,idx)=>s.classList.toggle('active',idx===i));document.getElementById('page').textContent=(i+1)+' / '+slides.length}
+    function next(){i=Math.min(slides.length-1,i+1);render()} function prev(){i=Math.max(0,i-1);render()}
+    addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key))next();if(['ArrowLeft','PageUp'].includes(e.key))prev()});
+    function fit(){document.documentElement.style.setProperty('--scale',Math.min(innerWidth/1280,innerHeight/720)*.98)} addEventListener('resize',fit);fit();render();
+  </script>
+</body>
+</html>
