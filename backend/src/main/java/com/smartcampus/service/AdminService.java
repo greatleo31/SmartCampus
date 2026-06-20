@@ -6,6 +6,7 @@ import com.smartcampus.dto.*;
 import com.smartcampus.exception.BizException;
 import com.smartcampus.mapper.*;
 import com.smartcampus.vo.AdminUserVO;
+import com.smartcampus.vo.AdminStatsVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,19 @@ public class AdminService {
     private final SysPermissionMapper permissionMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SystemConfigMapper configMapper;
+    private final AnnouncementMapper announcementMapper;
+    private final ClassScheduleMapper scheduleMapper;
+    private final AcademicWarningMapper warningMapper;
     private final PasswordEncoder passwordEncoder;
+
+    public AdminStatsVO stats() {
+        long userCount = userMapper.selectCount(new LambdaQueryWrapper<>());
+        long activeUserCount = userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getStatus, 1));
+        long announcementCount = announcementMapper.selectCount(new LambdaQueryWrapper<>());
+        long scheduleCount = scheduleMapper.selectCount(new LambdaQueryWrapper<>());
+        long exceptionTaskCount = warningMapper.selectCount(new LambdaQueryWrapper<AcademicWarning>().eq(AcademicWarning::getStatus, "OPEN"));
+        return new AdminStatsVO(userCount, activeUserCount, announcementCount, scheduleCount, 0, exceptionTaskCount);
+    }
 
     public List<AdminUserVO> users() {
         return userMapper.selectList(new LambdaQueryWrapper<SysUser>().orderByDesc(SysUser::getId))

@@ -20,4 +20,7 @@ public class SysUser extends BaseEntity {
     private String userType;
     private Integer status;
     private LocalDateTime lastLoginTime;
+    private String email;
+    private Integer wechatBound;
+    private String campusIdentity;
 }

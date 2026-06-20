@@ -1,64 +1,41 @@
 package com.smartcampus.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.smartcampus.common.ApiResponse;
-import com.smartcampus.domain.StudentProfile;
-import com.smartcampus.domain.TeacherProfile;
-import com.smartcampus.domain.TeachingClass;
-import com.smartcampus.domain.TeachingClassStudent;
-import com.smartcampus.mapper.StudentProfileMapper;
-import com.smartcampus.mapper.TeacherProfileMapper;
-import com.smartcampus.mapper.TeachingClassMapper;
-import com.smartcampus.mapper.TeachingClassStudentMapper;
-import com.smartcampus.security.CurrentUser;
-import com.smartcampus.security.SecurityUtils;
-import com.smartcampus.service.AccessService;
+import com.smartcampus.dto.EmailBindRequest;
+import com.smartcampus.dto.PasswordChangeRequest;
+import com.smartcampus.dto.WechatBindRequest;
+import com.smartcampus.service.ProfileService;
+import com.smartcampus.vo.ProfileSecurityVO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequestMapping("/api/profile")
+@PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class ProfileController {
-    private final TeacherProfileMapper teacherProfileMapper;
-    private final StudentProfileMapper studentProfileMapper;
-    private final TeachingClassMapper teachingClassMapper;
-    private final TeachingClassStudentMapper enrollmentMapper;
-    private final AccessService accessService;
+    private final ProfileService profileService;
 
-    @GetMapping("/api/teachers")
-    @PreAuthorize("hasAuthority('class:manage')")
-    public ApiResponse<List<TeacherProfile>> teachers() {
-        return ApiResponse.ok(teacherProfileMapper.selectList(new LambdaQueryWrapper<TeacherProfile>()
-                .orderByDesc(TeacherProfile::getId)));
+    @GetMapping("/security")
+    public ApiResponse<ProfileSecurityVO> security() {
+        return ApiResponse.ok(profileService.security());
     }
 
-    @GetMapping("/api/students")
-    @PreAuthorize("hasAuthority('enrollment:manage') or hasAuthority('grade:manage') or hasAuthority('attendance:manage')")
-    public ApiResponse<List<StudentProfile>> students() {
-        CurrentUser user = SecurityUtils.currentUser();
-        if (user.isAdmin()) {
-            return ApiResponse.ok(studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
-                    .orderByDesc(StudentProfile::getId)));
-        }
-        Long teacherId = accessService.currentTeacherId();
-        List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                        .eq(TeachingClass::getTeacherId, teacherId))
-                .stream().map(TeachingClass::getId).toList();
-        if (classIds.isEmpty()) {
-            return ApiResponse.ok(List.of());
-        }
-        List<Long> studentIds = enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
-                        .in(TeachingClassStudent::getTeachingClassId, classIds))
-                .stream().map(TeachingClassStudent::getStudentId).distinct().toList();
-        if (studentIds.isEmpty()) {
-            return ApiResponse.ok(List.of());
-        }
-        return ApiResponse.ok(studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
-                .in(StudentProfile::getId, studentIds)
-                .orderByDesc(StudentProfile::getId)));
+    @PutMapping("/password")
+    public ApiResponse<Void> password(@Valid @RequestBody PasswordChangeRequest request) {
+        profileService.changePassword(request);
+        return ApiResponse.ok(null);
+    }
+
+    @PutMapping("/email")
+    public ApiResponse<ProfileSecurityVO> email(@Valid @RequestBody EmailBindRequest request) {
+        return ApiResponse.ok(profileService.bindEmail(request));
+    }
+
+    @PutMapping("/wechat")
+    public ApiResponse<ProfileSecurityVO> wechat(@Valid @RequestBody WechatBindRequest request) {
+        return ApiResponse.ok(profileService.bindWechat(request));
     }
 }

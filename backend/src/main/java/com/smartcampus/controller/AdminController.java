@@ -7,6 +7,7 @@ import com.smartcampus.domain.SysUser;
 import com.smartcampus.domain.SystemConfig;
 import com.smartcampus.dto.*;
 import com.smartcampus.service.AdminService;
+import com.smartcampus.vo.AdminStatsVO;
 import com.smartcampus.vo.AdminUserVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminController {
     private final AdminService adminService;
+
+    @GetMapping("/stats")
+    public ApiResponse<AdminStatsVO> stats() {
+        return ApiResponse.ok(adminService.stats());
+    }
 
     @GetMapping("/users")
     @PreAuthorize("hasAuthority('user:manage')")

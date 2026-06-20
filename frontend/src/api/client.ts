@@ -45,3 +45,16 @@ export async function deleteData<T>(url: string): Promise<T> {
   if (data.code !== 0) throw new Error(data.message)
   return data.data
 }
+
+export async function postFormData<T>(url: string, body: FormData): Promise<T> {
+  const { data } = await http.post<ApiResponse<T>>(url, body, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  if (data.code !== 0) throw new Error(data.message)
+  return data.data
+}
+
+export async function downloadBlob(url: string): Promise<Blob> {
+  const { data } = await http.get<Blob>(url, { responseType: 'blob' })
+  return data
+}

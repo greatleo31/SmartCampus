@@ -44,26 +44,27 @@ export type Course = {
 
 export type TeachingClass = {
   id: number
-  classCode: string
   className: string
-  semesterId: number
-  courseId: number
-  teacherId: number
+  semesterName: string
+  courseName: string
+  teacherName: string
   capacity: number
 }
 
 export type TeacherProfile = {
   id: number
-  userId: number
+  userId?: number
   teacherNo: string
+  realName: string
   department: string
   title?: string
 }
 
 export type StudentProfile = {
   id: number
-  userId: number
+  userId?: number
   studentNo: string
+  realName: string
   major: string
   className: string
   gradeYear: number
@@ -71,14 +72,18 @@ export type StudentProfile = {
 
 export type Enrollment = {
   id: number
-  teachingClassId: number
-  studentId: number
+  teachingClassName: string
+  studentName: string
+  studentNo: string
+  major: string
+  className: string
 }
 
 export type GradeRecord = {
   id: number
-  teachingClassId: number
-  studentId: number
+  teachingClassName: string
+  courseName: string
+  studentName: string
   regularScore: number
   finalScore: number
   totalScore: number
@@ -86,20 +91,25 @@ export type GradeRecord = {
 
 export type AttendanceRecord = {
   id: number
-  teachingClassId: number
-  studentId: number
+  teachingClassName: string
+  courseName: string
+  studentName: string
   attendanceDate: string
   status: 'NORMAL' | 'LATE' | 'EARLY_LEAVE' | 'LEAVE' | 'ABSENT'
+  statusText: string
   remark?: string
 }
 
 export type AcademicWarning = {
   id: number
-  teachingClassId?: number
-  studentId: number
+  teachingClassName: string
+  courseName: string
+  studentName: string
   warningLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+  warningLevelText: string
+  absentCount: number
+  lateOrEarlyCount: number
   reason: string
-  status: 'OPEN' | 'CLOSED'
   generatedTime: string
 }
 
@@ -132,15 +142,18 @@ export type Announcement = {
   pinned: number
   publisherId: number
   publishTime?: string
+  sourceUrl: string
 }
 
 export type AnnouncementPayload = {
   title: string
   category: AnnouncementCategory
-  summary: string
-  content: string
+  summary?: string
+  content?: string
   status: 'DRAFT' | 'PUBLISHED'
   pinned: boolean
+  sourceUrl: string
+  publishTime?: string
 }
 
 export type ScheduleItem = {
@@ -173,7 +186,7 @@ export type TrendPoint = {
   label: string
   attendanceAbnormalCount: number
   warningCount: number
-  lowScoreCount: number
+  absentCount: number
 }
 
 export type Weather = {
@@ -229,4 +242,29 @@ export type Permission = {
   name: string
   menuPath?: string
   roleCode: string
+}
+
+export type ProfileSecurity = {
+  userId: number
+  username: string
+  realName: string
+  userType: User['userType']
+  email?: string
+  wechatBound: boolean
+  campusIdentity?: string
+  lastLoginTime?: string
+}
+
+export type AdminStats = {
+  userCount: number
+  activeUserCount: number
+  announcementCount: number
+  scheduleCount: number
+  importTaskCount: number
+  exceptionTaskCount: number
+}
+
+export type ImportResult = {
+  successCount: number
+  errors: string[]
 }

@@ -20,9 +20,6 @@ export function NotFoundPage() {
           <SearchX size={30} />
         </div>
         <h1 className="mt-5 text-2xl font-semibold text-[#172235]">未找到对应教务页面</h1>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#667085]">
-          当前地址不在可访问菜单中，可能是页面已调整或账号权限不足。
-        </p>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <Link className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[var(--campus-green)] px-3 text-sm font-medium text-white hover:bg-[var(--campus-green-dark)]" to="/">
             <Home size={16} />

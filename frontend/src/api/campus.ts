@@ -1,4 +1,4 @@
-import { deleteData, getData, postData, putData } from './client'
+import { deleteData, downloadBlob, getData, postData, postFormData, putData } from './client'
 import type {
   AcademicWarning,
   AdminUser,
@@ -19,8 +19,11 @@ import type {
   StudentProfile,
   SystemConfig,
   AdminUserPayload,
+  AdminStats,
   TeacherProfile,
   TeachingClass,
+  ImportResult,
+  ProfileSecurity,
   Weather,
 } from '../types/api'
 
@@ -38,19 +41,38 @@ export const campusApi = {
   teachers: () => getData<TeacherProfile[]>('/api/teachers'),
   students: () => getData<StudentProfile[]>('/api/students'),
   teachingClasses: () => getData<PageResult<TeachingClass>>('/api/teaching-classes', { page: 1, size: 100 }),
-  createTeachingClass: (body: Omit<TeachingClass, 'id'>) => postData<TeachingClass>('/api/teaching-classes', body),
+  createTeachingClass: (body: { classCode: string; className: string; semesterId: number; courseId: number; teacherId: number; capacity: number }) => postData<TeachingClass>('/api/teaching-classes', body),
   deleteTeachingClass: (id: number) => deleteData<void>(`/api/teaching-classes/${id}`),
   enrollments: (teachingClassId: number) => getData<Enrollment[]>('/api/enrollments', { teachingClassId }),
-  createEnrollment: (body: Omit<Enrollment, 'id'>) => postData<Enrollment>('/api/enrollments', body),
+  createEnrollment: (body: { teachingClassId: number; studentId: number }) => postData<Enrollment>('/api/enrollments', body),
   deleteEnrollment: (id: number) => deleteData<void>(`/api/enrollments/${id}`),
   grades: (params?: { teachingClassId?: number; studentId?: number }) => getData<GradeRecord[]>('/api/grades', params),
   saveGrade: (body: Omit<GradeRecord, 'id' | 'totalScore'>) => postData<GradeRecord>('/api/grades', body),
+  deleteGrade: (id: number) => deleteData<void>(`/api/grades/${id}`),
+  deleteGrades: (ids: number[]) => postData<void>('/api/grades/batch-delete', ids),
+  gradeTemplate: () => downloadBlob('/api/grades/template-xlsx'),
+  exportGrades: () => downloadBlob('/api/grades/export-xlsx'),
+  importGrades: (file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    return postFormData<ImportResult>('/api/grades/import-xlsx', body)
+  },
   attendance: (params?: { teachingClassId?: number; studentId?: number }) => getData<AttendanceRecord[]>('/api/attendance', params),
   saveAttendance: (body: Omit<AttendanceRecord, 'id'>) => postData<AttendanceRecord>('/api/attendance', body),
+  deleteAttendance: (id: number) => deleteData<void>(`/api/attendance/${id}`),
+  deleteAttendanceBatch: (ids: number[]) => postData<void>('/api/attendance/batch-delete', ids),
+  attendanceTemplate: () => downloadBlob('/api/attendance/template-xlsx'),
+  exportAttendance: () => downloadBlob('/api/attendance/export-xlsx'),
+  importAttendance: (file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    return postFormData<ImportResult>('/api/attendance/import-xlsx', body)
+  },
   warnings: () => getData<AcademicWarning[]>('/api/warnings'),
   recalculateWarnings: () => postData<number>('/api/warnings/recalculate'),
   readOnly: (endpoint: string) => getData<unknown>(endpoint, endpoint.includes('courses') ? { page: 1, size: 100 } : undefined),
   adminAnnouncements: () => getData<Announcement[]>('/api/admin/announcements'),
+  adminStats: () => getData<AdminStats>('/api/admin/stats'),
   createAnnouncement: (body: AnnouncementPayload) => postData<Announcement>('/api/admin/announcements', body),
   updateAnnouncement: (id: number, body: AnnouncementPayload) => putData<Announcement>(`/api/admin/announcements/${id}`, body),
   deleteAnnouncement: (id: number) => deleteData<void>(`/api/admin/announcements/${id}`),
@@ -71,4 +93,8 @@ export const campusApi = {
   updatePermission: (id: number, body: Omit<Permission, 'id'>) => putData<Permission>(`/api/admin/permissions/${id}`, body),
   adminConfigs: () => getData<SystemConfig[]>('/api/admin/configs'),
   updateConfig: (id: number, body: Pick<SystemConfig, 'configName' | 'configValue' | 'description'>) => putData<SystemConfig>(`/api/admin/configs/${id}`, body),
+  profileSecurity: () => getData<ProfileSecurity>('/api/profile/security'),
+  changePassword: (body: { oldPassword: string; newPassword: string }) => putData<void>('/api/profile/password', body),
+  bindEmail: (body: { email: string }) => putData<ProfileSecurity>('/api/profile/email', body),
+  bindWechat: (body: { bound: boolean; campusIdentity?: string }) => putData<ProfileSecurity>('/api/profile/wechat', body),
 }

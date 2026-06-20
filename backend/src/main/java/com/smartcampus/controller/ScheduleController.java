@@ -18,7 +18,7 @@ public class ScheduleController {
     private final ScheduleService scheduleService;
 
     @GetMapping("/api/schedules/my")
-    @PreAuthorize("hasAuthority('dashboard:view') or hasAuthority('schedule:view') or hasAuthority('student:course:view')")
+    @PreAuthorize("hasAuthority('dashboard:view') or hasAuthority('schedule:view') or hasAuthority('student:course:view') or hasAuthority('student:schedule:view') or hasAuthority('student:class-schedule:view')")
     public ApiResponse<List<ScheduleItemVO>> mySchedules() {
         return ApiResponse.ok(scheduleService.mySchedules());
     }

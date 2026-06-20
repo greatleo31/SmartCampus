@@ -42,12 +42,15 @@ public class AnnouncementService {
         Announcement announcement = id == null ? new Announcement() : require(id);
         announcement.setTitle(request.title());
         announcement.setCategory(request.category());
-        announcement.setSummary(request.summary());
-        announcement.setContent(request.content());
+        announcement.setSummary(request.summary() == null ? "" : request.summary());
+        announcement.setContent(request.content() == null ? "" : request.content());
         announcement.setStatus(request.status());
         announcement.setPinned(Boolean.TRUE.equals(request.pinned()) ? 1 : 0);
         announcement.setPublisherId(SecurityUtils.currentUser().id());
-        if ("PUBLISHED".equals(request.status()) && announcement.getPublishTime() == null) {
+        announcement.setSourceUrl(request.sourceUrl());
+        if (request.publishTime() != null) {
+            announcement.setPublishTime(request.publishTime());
+        } else if ("PUBLISHED".equals(request.status()) && announcement.getPublishTime() == null) {
             announcement.setPublishTime(LocalDateTime.now());
         }
         if (id == null) {

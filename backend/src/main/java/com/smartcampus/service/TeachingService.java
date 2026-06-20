@@ -15,6 +15,7 @@ import com.smartcampus.security.CurrentUser;
 import com.smartcampus.security.SecurityUtils;
 import com.smartcampus.vo.DashboardVO;
 import com.smartcampus.vo.TrendPointVO;
+import com.smartcampus.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,8 +37,11 @@ public class TeachingService {
     private final GradeRecordMapper gradeMapper;
     private final AttendanceRecordMapper attendanceMapper;
     private final AcademicWarningMapper warningMapper;
+    private final CourseMapper courseMapper;
+    private final SemesterMapper semesterMapper;
+    private final SysUserMapper userMapper;
 
-    public PageResult<TeachingClass> teachingClasses(PageRequest request) {
+    public PageResult<TeachingClassVO> teachingClasses(PageRequest request) {
         CurrentUser user = SecurityUtils.currentUser();
         LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<TeachingClass>()
                 .and(StringUtils.hasText(request.keyword()), w -> w
@@ -58,7 +62,25 @@ public class TeachingService {
             wrapper.in(TeachingClass::getId, classIds);
         }
         Page<TeachingClass> page = teachingClassMapper.selectPage(new Page<>(request.page(), request.size()), wrapper);
-        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords());
+        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords().stream().map(this::toTeachingClassVO).toList());
+    }
+
+    public List<TeacherProfileVO> teachers() {
+        return teacherProfileMapper.selectList(new LambdaQueryWrapper<TeacherProfile>()
+                        .orderByAsc(TeacherProfile::getTeacherNo))
+                .stream()
+                .map(this::toTeacherProfileVO)
+                .toList();
+    }
+
+    public List<StudentProfileVO> students() {
+        return studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
+                        .orderByAsc(StudentProfile::getGradeYear)
+                        .orderByAsc(StudentProfile::getClassName)
+                        .orderByAsc(StudentProfile::getStudentNo))
+                .stream()
+                .map(this::toStudentProfileVO)
+                .toList();
     }
 
     public TeachingClass saveTeachingClass(Long id, TeachingClassRequest request) {
@@ -106,11 +128,12 @@ public class TeachingService {
         return enrollment;
     }
 
-    public List<TeachingClassStudent> enrollments(Long teachingClassId) {
+    public List<EnrollmentVO> enrollments(Long teachingClassId) {
         accessService.assertClassScope(teachingClassId);
         return enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
                 .eq(TeachingClassStudent::getTeachingClassId, teachingClassId)
-                .orderByDesc(TeachingClassStudent::getId));
+                .orderByDesc(TeachingClassStudent::getId))
+                .stream().map(this::toEnrollmentVO).toList();
     }
 
     public void deleteEnrollment(Long id) {
@@ -153,6 +176,23 @@ public class TeachingService {
         return gradeMapper.selectList(wrapper);
     }
 
+    public List<GradeRecordVO> gradeViews(Long teachingClassId, Long studentId) {
+        return grades(teachingClassId, studentId).stream().map(this::toGradeVO).toList();
+    }
+
+    public void deleteGrade(Long id) {
+        GradeRecord record = gradeMapper.selectById(id);
+        if (record == null) {
+            throw new BizException(404, "成绩记录不存在");
+        }
+        accessService.assertClassScope(record.getTeachingClassId());
+        gradeMapper.deleteById(id);
+    }
+
+    public void deleteGrades(List<Long> ids) {
+        ids.forEach(this::deleteGrade);
+    }
+
     @Transactional
     public AttendanceRecord saveAttendance(Long id, AttendanceRequest request) {
         assertAttendanceStatus(request.status());
@@ -182,8 +222,28 @@ public class TeachingService {
                 .eq(teachingClassId != null, AttendanceRecord::getTeachingClassId, teachingClassId)
                 .eq(studentId != null, AttendanceRecord::getStudentId, studentId)
                 .orderByDesc(AttendanceRecord::getAttendanceDate);
+        if (SecurityUtils.currentUser().isTeacher()) {
+            wrapper.ne(AttendanceRecord::getStatus, "NORMAL");
+        }
         applyAttendanceScope(wrapper);
         return attendanceMapper.selectList(wrapper);
+    }
+
+    public List<AttendanceRecordVO> attendanceViews(Long teachingClassId, Long studentId) {
+        return attendance(teachingClassId, studentId).stream().map(this::toAttendanceVO).toList();
+    }
+
+    public void deleteAttendance(Long id) {
+        AttendanceRecord record = attendanceMapper.selectById(id);
+        if (record == null) {
+            throw new BizException(404, "考勤记录不存在");
+        }
+        accessService.assertClassScope(record.getTeachingClassId());
+        attendanceMapper.deleteById(id);
+    }
+
+    public void deleteAttendanceBatch(List<Long> ids) {
+        ids.forEach(this::deleteAttendance);
     }
 
     @Transactional
@@ -195,25 +255,34 @@ public class TeachingService {
             if (!canSeePair(user, enrollment.getTeachingClassId(), enrollment.getStudentId())) {
                 continue;
             }
-            GradeRecord grade = gradeMapper.selectOne(new LambdaQueryWrapper<GradeRecord>()
-                    .eq(GradeRecord::getTeachingClassId, enrollment.getTeachingClassId())
-                    .eq(GradeRecord::getStudentId, enrollment.getStudentId()));
             List<AttendanceRecord> records = attendanceMapper.selectList(new LambdaQueryWrapper<AttendanceRecord>()
                     .eq(AttendanceRecord::getTeachingClassId, enrollment.getTeachingClassId())
                     .eq(AttendanceRecord::getStudentId, enrollment.getStudentId()));
             long absent = records.stream().filter(r -> "ABSENT".equals(r.getStatus())).count();
             long lateOrEarly = records.stream().filter(r -> "LATE".equals(r.getStatus()) || "EARLY_LEAVE".equals(r.getStatus())).count();
-            WarningRuleEngine.WarningDecision decision = WarningRuleEngine.evaluate(
-                    grade == null ? null : grade.getTotalScore(), absent, lateOrEarly);
+            WarningRuleEngine.WarningDecision decision = WarningRuleEngine.evaluate(absent, lateOrEarly);
             if (decision.hasWarning()) {
-                AcademicWarning warning = new AcademicWarning();
+                AcademicWarning warning = warningMapper.selectOne(new LambdaQueryWrapper<AcademicWarning>()
+                        .eq(AcademicWarning::getTeachingClassId, enrollment.getTeachingClassId())
+                        .eq(AcademicWarning::getStudentId, enrollment.getStudentId())
+                        .eq(AcademicWarning::getStatus, "OPEN")
+                        .last("limit 1"));
+                if (warning == null) {
+                    warning = new AcademicWarning();
+                    warning.setTeachingClassId(enrollment.getTeachingClassId());
+                    warning.setStudentId(enrollment.getStudentId());
+                }
                 warning.setTeachingClassId(enrollment.getTeachingClassId());
                 warning.setStudentId(enrollment.getStudentId());
                 warning.setWarningLevel(decision.level());
                 warning.setReason(decision.reason());
                 warning.setStatus("OPEN");
                 warning.setGeneratedTime(LocalDateTime.now());
-                warningMapper.insert(warning);
+                if (warning.getId() == null) {
+                    warningMapper.insert(warning);
+                } else {
+                    warningMapper.updateById(warning);
+                }
                 generated++;
             }
         }
@@ -225,7 +294,25 @@ public class TeachingService {
                 .eq(studentId != null, AcademicWarning::getStudentId, studentId)
                 .orderByDesc(AcademicWarning::getGeneratedTime);
         applyWarningScope(wrapper);
-        return warningMapper.selectList(wrapper);
+        return warningMapper.selectList(wrapper).stream()
+                .sorted((left, right) -> {
+                    WarningCounts leftCounts = warningCounts(left.getTeachingClassId(), left.getStudentId());
+                    WarningCounts rightCounts = warningCounts(right.getTeachingClassId(), right.getStudentId());
+                    int absentCompare = Long.compare(rightCounts.absentCount(), leftCounts.absentCount());
+                    if (absentCompare != 0) {
+                        return absentCompare;
+                    }
+                    int lateCompare = Long.compare(rightCounts.lateOrEarlyCount(), leftCounts.lateOrEarlyCount());
+                    if (lateCompare != 0) {
+                        return lateCompare;
+                    }
+                    return right.getGeneratedTime().compareTo(left.getGeneratedTime());
+                })
+                .toList();
+    }
+
+    public List<AcademicWarningVO> warningViews(Long studentId) {
+        return warnings(studentId).stream().map(this::toWarningVO).toList();
     }
 
     public DashboardVO dashboard() {
@@ -332,18 +419,19 @@ public class TeachingService {
                     LambdaQueryWrapper<AcademicWarning> warning = new LambdaQueryWrapper<AcademicWarning>()
                             .ge(AcademicWarning::getGeneratedTime, day.atStartOfDay())
                             .lt(AcademicWarning::getGeneratedTime, day.plusDays(1).atStartOfDay());
-                    LambdaQueryWrapper<GradeRecord> lowScore = new LambdaQueryWrapper<GradeRecord>()
-                            .lt(GradeRecord::getTotalScore, 60);
+                    LambdaQueryWrapper<AttendanceRecord> absent = new LambdaQueryWrapper<AttendanceRecord>()
+                            .eq(AttendanceRecord::getAttendanceDate, day)
+                            .eq(AttendanceRecord::getStatus, "ABSENT");
                     if (user.isTeacher()) {
                         attendance.in(AttendanceRecord::getTeachingClassId, scopedClassIds);
                         warning.in(AcademicWarning::getTeachingClassId, scopedClassIds);
-                        lowScore.in(GradeRecord::getTeachingClassId, scopedClassIds);
+                        absent.in(AttendanceRecord::getTeachingClassId, scopedClassIds);
                     }
                     return new TrendPointVO(
                             day.getMonthValue() + "/" + day.getDayOfMonth(),
                             attendanceMapper.selectCount(attendance),
                             warningMapper.selectCount(warning),
-                            gradeMapper.selectCount(lowScore)
+                            attendanceMapper.selectCount(absent)
                     );
                 }).toList();
     }
@@ -416,4 +504,142 @@ public class TeachingService {
             throw new BizException(400, "考勤状态不合法");
         }
     }
+
+    private TeachingClassVO toTeachingClassVO(TeachingClass teachingClass) {
+        Semester semester = semesterMapper.selectById(teachingClass.getSemesterId());
+        Course course = courseMapper.selectById(teachingClass.getCourseId());
+        TeacherProfile teacher = teacherProfileMapper.selectById(teachingClass.getTeacherId());
+        SysUser teacherUser = teacher == null ? null : userMapper.selectById(teacher.getUserId());
+        return new TeachingClassVO(
+                teachingClass.getId(),
+                teachingClass.getClassName(),
+                semester == null ? "-" : semester.getName(),
+                course == null ? "-" : course.getName(),
+                teacherUser == null ? "-" : teacherUser.getRealName(),
+                teachingClass.getCapacity()
+        );
+    }
+
+    private TeacherProfileVO toTeacherProfileVO(TeacherProfile teacher) {
+        SysUser user = teacher == null ? null : userMapper.selectById(teacher.getUserId());
+        return new TeacherProfileVO(
+                teacher == null ? null : teacher.getId(),
+                teacher == null ? "-" : teacher.getTeacherNo(),
+                user == null ? "-" : user.getRealName(),
+                teacher == null ? "-" : teacher.getDepartment(),
+                teacher == null ? "-" : teacher.getTitle()
+        );
+    }
+
+    private StudentProfileVO toStudentProfileVO(StudentProfile student) {
+        SysUser user = student == null ? null : userMapper.selectById(student.getUserId());
+        return new StudentProfileVO(
+                student == null ? null : student.getId(),
+                student == null ? "-" : student.getStudentNo(),
+                user == null ? "-" : user.getRealName(),
+                student == null ? "-" : student.getMajor(),
+                student == null ? "-" : student.getClassName(),
+                student == null ? null : student.getGradeYear()
+        );
+    }
+
+    private EnrollmentVO toEnrollmentVO(TeachingClassStudent enrollment) {
+        TeachingClass teachingClass = teachingClassMapper.selectById(enrollment.getTeachingClassId());
+        StudentProfile student = studentProfileMapper.selectById(enrollment.getStudentId());
+        SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
+        return new EnrollmentVO(
+                enrollment.getId(),
+                teachingClass == null ? "-" : teachingClass.getClassName(),
+                studentUser == null ? "-" : studentUser.getRealName(),
+                student == null ? "-" : student.getStudentNo(),
+                student == null ? "-" : student.getMajor(),
+                student == null ? "-" : student.getClassName()
+        );
+    }
+
+    private GradeRecordVO toGradeVO(GradeRecord record) {
+        TeachingClass teachingClass = teachingClassMapper.selectById(record.getTeachingClassId());
+        Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
+        StudentProfile student = studentProfileMapper.selectById(record.getStudentId());
+        SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
+        return new GradeRecordVO(
+                record.getId(),
+                teachingClass == null ? "-" : teachingClass.getClassName(),
+                course == null ? "-" : course.getName(),
+                studentUser == null ? "-" : studentUser.getRealName(),
+                record.getRegularScore(),
+                record.getFinalScore(),
+                record.getTotalScore()
+        );
+    }
+
+    private AttendanceRecordVO toAttendanceVO(AttendanceRecord record) {
+        TeachingClass teachingClass = teachingClassMapper.selectById(record.getTeachingClassId());
+        Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
+        StudentProfile student = studentProfileMapper.selectById(record.getStudentId());
+        SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
+        return new AttendanceRecordVO(
+                record.getId(),
+                teachingClass == null ? "-" : teachingClass.getClassName(),
+                course == null ? "-" : course.getName(),
+                studentUser == null ? "-" : studentUser.getRealName(),
+                record.getAttendanceDate(),
+                record.getStatus(),
+                attendanceStatusText(record.getStatus()),
+                record.getRemark()
+        );
+    }
+
+    private AcademicWarningVO toWarningVO(AcademicWarning warning) {
+        TeachingClass teachingClass = warning.getTeachingClassId() == null ? null : teachingClassMapper.selectById(warning.getTeachingClassId());
+        Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
+        StudentProfile student = studentProfileMapper.selectById(warning.getStudentId());
+        SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
+        WarningCounts counts = warningCounts(warning.getTeachingClassId(), warning.getStudentId());
+        return new AcademicWarningVO(
+                warning.getId(),
+                teachingClass == null ? "-" : teachingClass.getClassName(),
+                course == null ? "-" : course.getName(),
+                studentUser == null ? "-" : studentUser.getRealName(),
+                warning.getWarningLevel(),
+                warningLevelText(warning.getWarningLevel()),
+                counts.absentCount(),
+                counts.lateOrEarlyCount(),
+                warning.getReason(),
+                warning.getGeneratedTime()
+        );
+    }
+
+    private WarningCounts warningCounts(Long teachingClassId, Long studentId) {
+        List<AttendanceRecord> records = attendanceMapper.selectList(new LambdaQueryWrapper<AttendanceRecord>()
+                .eq(AttendanceRecord::getTeachingClassId, teachingClassId)
+                .eq(AttendanceRecord::getStudentId, studentId));
+        long absent = records.stream().filter(record -> "ABSENT".equals(record.getStatus())).count();
+        long lateOrEarly = records.stream().filter(record -> "LATE".equals(record.getStatus()) || "EARLY_LEAVE".equals(record.getStatus())).count();
+        return new WarningCounts(absent, lateOrEarly);
+    }
+
+    private record WarningCounts(long absentCount, long lateOrEarlyCount) {
+    }
+
+    private String attendanceStatusText(String status) {
+        return switch (status) {
+            case "NORMAL" -> "正常";
+            case "LATE" -> "迟到";
+            case "EARLY_LEAVE" -> "早退";
+            case "LEAVE" -> "请假";
+            case "ABSENT" -> "旷课";
+            default -> status;
+        };
+    }
+
+    private String warningLevelText(String level) {
+        return switch (level) {
+            case "LOW" -> "低风险";
+            case "MEDIUM" -> "中风险";
+            case "HIGH" -> "高风险";
+            default -> level;
+        };
+    }
+
 }

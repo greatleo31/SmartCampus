@@ -1,55 +1,82 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Download, FileDown, FileUp, Trash2 } from 'lucide-react'
 import { campusApi } from '../api/campus'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { DataTable } from '../components/ui/DataTable'
-import { Input, Select } from '../components/ui/Input'
-import type { AttendanceRecord } from '../types/api'
+import { useAuth } from '../hooks/useAuth'
+import { saveBlob } from '../lib/download'
 
-export function AttendancePage() {
+export function AttendancePage({ adminMode = false }: { adminMode?: boolean }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState<Omit<AttendanceRecord, 'id'>>({
-    teachingClassId: 1,
-    studentId: 1,
-    attendanceDate: new Date().toISOString().slice(0, 10),
-    status: 'NORMAL',
-    remark: '',
+  const fileRef = useRef<HTMLInputElement>(null)
+  const { user } = useAuth()
+  const [selected, setSelected] = useState<number[]>([])
+  const [message, setMessage] = useState('')
+  const [teachingClassId, setTeachingClassId] = useState(0)
+  const canManage = adminMode || user?.userType === 'ADMIN'
+  const { data: teachingClasses } = useQuery({ queryKey: ['teachingClasses'], queryFn: campusApi.teachingClasses })
+  const { data = [] } = useQuery({
+    queryKey: ['attendance', teachingClassId],
+    queryFn: () => campusApi.attendance(teachingClassId ? { teachingClassId } : undefined),
   })
-  const { data = [] } = useQuery({ queryKey: ['attendance'], queryFn: () => campusApi.attendance() })
-  const save = useMutation({ mutationFn: campusApi.saveAttendance, onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance'] }) })
+  const upload = useMutation({
+    mutationFn: (file: File) => campusApi.importAttendance(file),
+    onSuccess: async (result) => {
+      await qc.invalidateQueries({ queryKey: ['attendance'] })
+      setMessage(`导入成功 ${result.successCount} 行${result.errors.length ? `，失败 ${result.errors.length} 行：${result.errors.slice(0, 3).join('；')}` : ''}`)
+    },
+    onError: (error) => setMessage(error.message),
+  })
+  const remove = useMutation({
+    mutationFn: (ids: number[]) => campusApi.deleteAttendanceBatch(ids),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['attendance'] })
+      setSelected([])
+      setMessage('已批量删除')
+    },
+  })
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    save.mutate(form)
+  async function download(kind: 'template' | 'export') {
+    const blob = kind === 'template' ? await campusApi.attendanceTemplate() : await campusApi.exportAttendance()
+    saveBlob(blob, kind === 'template' ? '考勤导入模板.xlsx' : '考勤数据.xlsx')
   }
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-semibold text-slate-950">考勤管理</h1>
+      <div>
+        <h1 className="text-2xl font-semibold text-[#172235]">考勤管理</h1>
+      </div>
       <Card className="p-5">
-        <form className="mb-5 grid gap-3 md:grid-cols-6" onSubmit={submit}>
-          <Input type="number" value={form.teachingClassId} onChange={(e) => setForm({ ...form, teachingClassId: Number(e.target.value) })} required />
-          <Input type="number" value={form.studentId} onChange={(e) => setForm({ ...form, studentId: Number(e.target.value) })} required />
-          <Input type="date" value={form.attendanceDate} onChange={(e) => setForm({ ...form, attendanceDate: e.target.value })} required />
-          <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as AttendanceRecord['status'] })}>
-            <option value="NORMAL">正常</option>
-            <option value="LATE">迟到</option>
-            <option value="EARLY_LEAVE">早退</option>
-            <option value="LEAVE">请假</option>
-            <option value="ABSENT">旷课</option>
-          </Select>
-          <Input value={form.remark} onChange={(e) => setForm({ ...form, remark: e.target.value })} />
-          <Button>保存</Button>
-        </form>
+        <div className="mb-4 max-w-xs">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#556273]">教学班</span>
+            <select className={inputClass} value={teachingClassId} onChange={(event) => setTeachingClassId(Number(event.target.value))}>
+              <option value={0}>全部教学班</option>
+              {(teachingClasses?.records ?? []).map((item) => <option key={item.id} value={item.id}>{item.className}</option>)}
+            </select>
+          </label>
+        </div>
+        {canManage && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => download('template')}><FileDown size={16} />下载模板</Button>
+            <Button variant="secondary" onClick={() => download('export')}><Download size={16} />导出 XLSX</Button>
+            <Button onClick={() => fileRef.current?.click()}><FileUp size={16} />导入 XLSX</Button>
+            <Button variant="danger" disabled={selected.length === 0} onClick={() => window.confirm('确认批量删除所选考勤？') && remove.mutate(selected)}><Trash2 size={16} />批量删除</Button>
+            <input ref={fileRef} className="hidden" type="file" accept=".xlsx" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload.mutate(file); event.currentTarget.value = '' }} />
+          </div>
+        )}
+        {message && <div className="mb-4 rounded-md border border-[#d9dfd8] bg-[#f8faf7] px-3 py-2 text-sm text-[#344256]">{message}</div>}
         <DataTable
           rows={data as unknown as Record<string, unknown>[]}
           columns={[
-            { key: 'teachingClassId', title: '教学班ID' },
-            { key: 'studentId', title: '学生ID' },
+            ...(canManage ? [{ key: 'select', title: '', render: (row: Record<string, unknown>) => <input type="checkbox" checked={selected.includes(Number(row.id))} onChange={(e) => setSelected((prev) => e.target.checked ? [...prev, Number(row.id)] : prev.filter((id) => id !== Number(row.id)))} /> }] : []),
+            { key: 'courseName', title: '课程' },
+            { key: 'teachingClassName', title: '教学班' },
+            { key: 'studentName', title: '学生' },
             { key: 'attendanceDate', title: '日期' },
-            { key: 'status', title: '状态' },
+            { key: 'statusText', title: '状态' },
             { key: 'remark', title: '备注' },
           ]}
         />
@@ -57,3 +84,5 @@ export function AttendancePage() {
     </div>
   )
 }
+
+const inputClass = 'h-10 w-full rounded-md border border-[#cfd8d2] bg-white px-3 text-sm text-[#172235] outline-none transition focus:border-[var(--campus-green)] focus:ring-2 focus:ring-emerald-100'

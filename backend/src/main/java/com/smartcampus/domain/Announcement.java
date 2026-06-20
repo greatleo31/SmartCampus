@@ -22,4 +22,5 @@ public class Announcement extends BaseEntity {
     private Integer pinned;
     private Long publisherId;
     private LocalDateTime publishTime;
+    private String sourceUrl;
 }

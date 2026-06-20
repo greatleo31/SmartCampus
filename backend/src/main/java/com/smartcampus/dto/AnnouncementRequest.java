@@ -3,12 +3,16 @@ package com.smartcampus.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDateTime;
+
 public record AnnouncementRequest(
         @NotBlank String title,
         @NotBlank String category,
-        @NotBlank String summary,
-        @NotBlank String content,
+        String summary,
+        String content,
         @NotBlank String status,
-        @NotNull Boolean pinned
+        @NotNull Boolean pinned,
+        @NotBlank String sourceUrl,
+        LocalDateTime publishTime
 ) {
 }

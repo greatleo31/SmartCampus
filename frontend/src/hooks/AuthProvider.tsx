@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react'
 import type { User } from '../types/api'
 import { AuthContext, type AuthContextValue } from './auth-context'
+import { clearSessionTabs } from '../lib/sessionTabs'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(() => localStorage.getItem('smartcampus_token'))
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession: () => {
       localStorage.removeItem('smartcampus_token')
       localStorage.removeItem('smartcampus_user')
+      clearSessionTabs()
       setToken(null)
       setUser(null)
     },

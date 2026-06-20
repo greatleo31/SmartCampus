@@ -8,8 +8,8 @@ import jakarta.validation.constraints.NotNull;
 public record ClassScheduleRequest(
         @NotNull Long teachingClassId,
         @NotNull @Min(1) @Max(7) Integer dayOfWeek,
-        @NotNull @Min(1) @Max(12) Integer startSection,
-        @NotNull @Min(1) @Max(12) Integer endSection,
+        @NotNull @Min(1) @Max(14) Integer startSection,
+        @NotNull @Min(1) @Max(14) Integer endSection,
         @NotNull @Min(1) Integer startWeek,
         @NotNull @Min(1) Integer endWeek,
         @NotBlank String classroom,
