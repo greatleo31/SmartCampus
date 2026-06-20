@@ -333,12 +333,12 @@ function designDoc() {
     p('4.4 系统界面设计', { heading: HeadingLevel.HEADING_2 }),
     p('界面采用后台工作台风格。左侧为后端菜单驱动导航，顶部显示当前用户与退出按钮，主区以表格、表单和统计卡片为主。管理员页面强调配置效率；教师页面强调成绩和考勤录入；学生页面只读，减少误操作。'),
     p('4.5 数据库连接', { heading: HeadingLevel.HEADING_2 }),
-    p('后端 application.yml 中数据库 URL、用户名和密码均支持环境变量覆盖：SMARTCAMPUS_DB_URL、SMARTCAMPUS_DB_USERNAME、SMARTCAMPUS_DB_PASSWORD。JWT 密钥通过 SMARTCAMPUS_JWT_SECRET 提供，不在代码中硬编码。前端不直接连接数据库，只调用 /api 下的 REST 接口。'),
+    p('为方便课程交付演示，后端通过 DatabaseConfig 固定连接本机 MySQL smart_campus 数据库，用户名 root，密码 123456。JWT 默认读取 backend/config/jwt-secret.txt 中的演示密钥，也支持 SMARTCAMPUS_JWT_SECRET 覆盖。前端不直接连接数据库，只调用 /api 下的 REST 接口。'),
     p('5 系统安装及使用说明', { heading: HeadingLevel.HEADING_1 }),
     p('5.1 运行环境', { heading: HeadingLevel.HEADING_2 }),
     p('服务器端需要 JDK 17、Maven、MySQL 8；客户端需要 Chrome 或 Edge；前端开发需要 Node.js 20+。'),
     p('5.2 配置说明', { heading: HeadingLevel.HEADING_2 }),
-    p('导入数据库：mysql -u root -p < sql/schema.sql，随后导入 views.sql 和 data.sql。启动后端前设置 SMARTCAMPUS_DB_USERNAME、SMARTCAMPUS_DB_PASSWORD、SMARTCAMPUS_JWT_SECRET。进入 backend 执行 mvn spring-boot:run。进入 frontend 执行 npm install 和 npm run dev。'),
+    p('导入数据库：mysql -u root -p123456 依次执行 sql/schema.sql、sql/views.sql 和 sql/data.sql。进入 backend 执行 mvn spring-boot:run 即可启动后端；进入 frontend 执行 npm install 和 npm run dev 启动前端。JWT 演示密钥位于 backend/config/jwt-secret.txt，生产环境应改用环境变量或私有密钥文件。'),
     p('5.3 用户使用说明', { heading: HeadingLevel.HEADING_2 }),
     p('管理员登录后依次进入学期管理、课程管理、教学班管理、学生名单页面完成教学闭环配置。教师登录后进入成绩管理和考勤管理维护本人教学班数据，再进入学业预警页面重新计算预警。学生登录后进入我的课程、我的成绩、我的考勤、我的预警页面查看本人数据。'),
   ];
@@ -357,7 +357,7 @@ function htmlPresentation() {
     ['08', '成绩与预警规则', '总评 = 平时分 40% + 期末分 60%', ['总评低于 70 触发低风险', '总评低于 60 或旷课触发更高风险', '旷课、迟到、早退共同影响风险等级']],
     ['09', '前端实现', '后台工作台而非营销页', ['登录页、仪表盘、管理页、学生只读页', '后端菜单驱动导航显示', 'TypeScript 手写类型，不自动生成 client']],
     ['10', '验证结果', '构建、测试、SQL 导入均已验证', ['mvn test 通过', 'npm run type-check / build 通过', 'MySQL 空库导入通过']],
-    ['11', '安全措施', '不信任前端权限', ['BCrypt 密码哈希', 'JWT 不保存敏感字段', '数据库密码和 JWT 密钥通过环境变量提供']],
+    ['11', '安全措施', '不信任前端权限', ['BCrypt 密码哈希', 'JWT 不保存敏感字段', '演示密钥文件可被环境变量覆盖']],
     ['12', '总结与扩展', 'v1 可答辩、可运行、可扩展', ['后续可扩展选课、请假审批、排课冲突检测', '预警规则可升级为策略配置', '统计视图可扩展为数据看板']],
   ];
   const slideHtml = slides.map((s) => `

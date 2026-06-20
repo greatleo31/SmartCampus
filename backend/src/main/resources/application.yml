@@ -4,11 +4,6 @@ server:
 spring:
   application:
     name: smartcampus-backend
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${SMARTCAMPUS_DB_URL:jdbc:mysql://localhost:3306/smart_campus?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
-    username: ${SMARTCAMPUS_DB_USERNAME:root}
-    password: ${SMARTCAMPUS_DB_PASSWORD:}
 
 mybatis-plus:
   configuration:
@@ -21,7 +16,8 @@ mybatis-plus:
 
 smart-campus:
   jwt:
-    secret: ${SMARTCAMPUS_JWT_SECRET}
+    secret: ${SMARTCAMPUS_JWT_SECRET:}
+    secret-file: ${SMARTCAMPUS_JWT_SECRET_FILE:config/jwt-secret.txt}
     expiration-minutes: ${SMARTCAMPUS_JWT_EXPIRATION_MINUTES:120}
 
 springdoc:
