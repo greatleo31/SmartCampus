@@ -4,6 +4,9 @@ USE smart_campus;
 DROP TABLE IF EXISTS academic_warning;
 DROP TABLE IF EXISTS attendance_record;
 DROP TABLE IF EXISTS grade_record;
+DROP TABLE IF EXISTS class_schedule;
+DROP TABLE IF EXISTS announcement;
+DROP TABLE IF EXISTS system_config;
 DROP TABLE IF EXISTS teaching_class_student;
 DROP TABLE IF EXISTS teaching_class;
 DROP TABLE IF EXISTS student_profile;
@@ -156,6 +159,24 @@ CREATE TABLE teaching_class_student (
   KEY idx_enrollment_student (student_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE class_schedule (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  teaching_class_id BIGINT NOT NULL,
+  day_of_week INT NOT NULL,
+  start_section INT NOT NULL,
+  end_section INT NOT NULL,
+  start_week INT NOT NULL,
+  end_week INT NOT NULL,
+  classroom VARCHAR(128) NOT NULL,
+  location VARCHAR(128) NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  KEY idx_schedule_class (teaching_class_id),
+  KEY idx_schedule_day_section (day_of_week, start_section),
+  KEY idx_schedule_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE grade_record (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   teaching_class_id BIGINT NOT NULL,
@@ -204,4 +225,36 @@ CREATE TABLE academic_warning (
   KEY idx_warning_student (student_id),
   KEY idx_warning_level (warning_level),
   KEY idx_warning_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE announcement (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(200) NOT NULL,
+  category VARCHAR(20) NOT NULL,
+  summary VARCHAR(500) NOT NULL,
+  content TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+  pinned TINYINT NOT NULL DEFAULT 0,
+  publisher_id BIGINT NOT NULL,
+  publish_time DATETIME NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  KEY idx_announcement_category (category),
+  KEY idx_announcement_status (status),
+  KEY idx_announcement_publish (publish_time),
+  KEY idx_announcement_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE system_config (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  config_key VARCHAR(128) NOT NULL,
+  config_name VARCHAR(128) NOT NULL,
+  config_value VARCHAR(500) NOT NULL,
+  description VARCHAR(500) NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_config_key (config_key),
+  KEY idx_config_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

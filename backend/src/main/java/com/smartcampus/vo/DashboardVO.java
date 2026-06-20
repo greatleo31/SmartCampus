@@ -5,10 +5,14 @@ import com.smartcampus.domain.AcademicWarning;
 import java.util.List;
 
 public record DashboardVO(
+        String role,
+        String greetingName,
+        boolean showKpis,
         long teachingClassCount,
         long studentCount,
         long todayAttendanceAbnormalCount,
         long highRiskStudentCount,
-        List<AcademicWarning> recentWarnings
+        List<AcademicWarning> recentWarnings,
+        List<TrendPointVO> trends
 ) {
 }

@@ -14,6 +14,7 @@ import com.smartcampus.mapper.*;
 import com.smartcampus.security.CurrentUser;
 import com.smartcampus.security.SecurityUtils;
 import com.smartcampus.vo.DashboardVO;
+import com.smartcampus.vo.TrendPointVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -241,7 +242,7 @@ public class TeachingService {
                     .stream().map(TeachingClass::getId).toList();
             classWrapper.eq(TeachingClass::getTeacherId, teacherId);
             if (classIds.isEmpty()) {
-                return new DashboardVO(0, 0, 0, 0, List.of());
+                return new DashboardVO(user.userType(), user.realName(), true, 0, 0, 0, 0, List.of(), List.of());
             }
             warningWrapper.in(AcademicWarning::getTeachingClassId, classIds);
             attendanceWrapper.in(AttendanceRecord::getTeachingClassId, classIds);
@@ -251,15 +252,15 @@ public class TeachingService {
                             .eq(TeachingClassStudent::getStudentId, studentId))
                     .stream().map(TeachingClassStudent::getTeachingClassId).toList();
             if (classIds.isEmpty()) {
-                return new DashboardVO(0, 1, 0, 0, List.of());
+                return new DashboardVO(user.userType(), user.realName(), false, 0, 0, 0, 0, List.of(), List.of());
             }
             classWrapper.in(TeachingClass::getId, classIds);
             warningWrapper.eq(AcademicWarning::getStudentId, studentId);
             attendanceWrapper.eq(AttendanceRecord::getStudentId, studentId);
         }
-        long teachingClassCount = teachingClassMapper.selectCount(classWrapper);
-        long studentCount = user.isStudent() ? 1 : studentProfileMapper.selectCount(new LambdaQueryWrapper<>());
-        long abnormalCount = attendanceMapper.selectCount(attendanceWrapper);
+        long teachingClassCount = user.isStudent() ? 0 : teachingClassMapper.selectCount(classWrapper);
+        long studentCount = scopedStudentCount(user);
+        long abnormalCount = user.isStudent() ? 0 : attendanceMapper.selectCount(attendanceWrapper);
         LambdaQueryWrapper<AcademicWarning> highRiskWrapper = new LambdaQueryWrapper<AcademicWarning>()
                 .eq(AcademicWarning::getWarningLevel, "HIGH")
                 .eq(AcademicWarning::getStatus, "OPEN");
@@ -273,9 +274,78 @@ public class TeachingService {
         } else if (user.isStudent()) {
             highRiskWrapper.eq(AcademicWarning::getStudentId, accessService.currentStudentId());
         }
-        long highRiskCount = warningMapper.selectCount(highRiskWrapper);
-        List<AcademicWarning> recent = warningMapper.selectList(warningWrapper.last("limit 8"));
-        return new DashboardVO(teachingClassCount, studentCount, abnormalCount, highRiskCount, recent);
+        long highRiskCount = user.isStudent() ? 0 : warningMapper.selectCount(highRiskWrapper);
+        List<AcademicWarning> recent = warningMapper.selectList(warningWrapper.orderByDesc(AcademicWarning::getGeneratedTime).last("limit 8"));
+        return new DashboardVO(
+                user.userType(),
+                user.realName(),
+                !user.isStudent(),
+                teachingClassCount,
+                studentCount,
+                abnormalCount,
+                highRiskCount,
+                recent,
+                dashboardTrends(user)
+        );
+    }
+
+    private long scopedStudentCount(CurrentUser user) {
+        if (user.isStudent()) {
+            return 0;
+        }
+        if (user.isAdmin()) {
+            return studentProfileMapper.selectCount(new LambdaQueryWrapper<>());
+        }
+        Long teacherId = accessService.currentTeacherId();
+        List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                        .eq(TeachingClass::getTeacherId, teacherId))
+                .stream().map(TeachingClass::getId).toList();
+        if (classIds.isEmpty()) {
+            return 0;
+        }
+        return enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
+                        .in(TeachingClassStudent::getTeachingClassId, classIds))
+                .stream().map(TeachingClassStudent::getStudentId).distinct().count();
+    }
+
+    private List<TrendPointVO> dashboardTrends(CurrentUser user) {
+        if (user.isStudent()) {
+            return List.of();
+        }
+        List<Long> classIds = List.of();
+        if (user.isTeacher()) {
+            Long teacherId = accessService.currentTeacherId();
+            classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                            .eq(TeachingClass::getTeacherId, teacherId))
+                    .stream().map(TeachingClass::getId).toList();
+            if (classIds.isEmpty()) {
+                return List.of();
+            }
+        }
+        List<Long> scopedClassIds = classIds;
+        return java.util.stream.IntStream.rangeClosed(0, 6)
+                .mapToObj(offset -> {
+                    LocalDate day = LocalDate.now().minusDays(6L - offset);
+                    LambdaQueryWrapper<AttendanceRecord> attendance = new LambdaQueryWrapper<AttendanceRecord>()
+                            .eq(AttendanceRecord::getAttendanceDate, day)
+                            .in(AttendanceRecord::getStatus, List.of("LATE", "EARLY_LEAVE", "ABSENT"));
+                    LambdaQueryWrapper<AcademicWarning> warning = new LambdaQueryWrapper<AcademicWarning>()
+                            .ge(AcademicWarning::getGeneratedTime, day.atStartOfDay())
+                            .lt(AcademicWarning::getGeneratedTime, day.plusDays(1).atStartOfDay());
+                    LambdaQueryWrapper<GradeRecord> lowScore = new LambdaQueryWrapper<GradeRecord>()
+                            .lt(GradeRecord::getTotalScore, 60);
+                    if (user.isTeacher()) {
+                        attendance.in(AttendanceRecord::getTeachingClassId, scopedClassIds);
+                        warning.in(AcademicWarning::getTeachingClassId, scopedClassIds);
+                        lowScore.in(GradeRecord::getTeachingClassId, scopedClassIds);
+                    }
+                    return new TrendPointVO(
+                            day.getMonthValue() + "/" + day.getDayOfMonth(),
+                            attendanceMapper.selectCount(attendance),
+                            warningMapper.selectCount(warning),
+                            gradeMapper.selectCount(lowScore)
+                    );
+                }).toList();
     }
 
     private void assertEnrollmentAndScope(Long teachingClassId, Long studentId) {

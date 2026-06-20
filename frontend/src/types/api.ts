@@ -104,14 +104,129 @@ export type AcademicWarning = {
 }
 
 export type Dashboard = {
+  role: User['userType']
+  greetingName: string
+  showKpis: boolean
   teachingClassCount: number
   studentCount: number
   todayAttendanceAbnormalCount: number
   highRiskStudentCount: number
   recentWarnings: AcademicWarning[]
+  trends: TrendPoint[]
 }
 
 export type LoginResult = {
   token: string
   user: User
+}
+
+export type AnnouncementCategory = 'NOTICE' | 'MEETING' | 'PUBLICITY' | 'LECTURE'
+
+export type Announcement = {
+  id: number
+  title: string
+  category: AnnouncementCategory
+  summary: string
+  content: string
+  status: 'DRAFT' | 'PUBLISHED'
+  pinned: number
+  publisherId: number
+  publishTime?: string
+}
+
+export type AnnouncementPayload = {
+  title: string
+  category: AnnouncementCategory
+  summary: string
+  content: string
+  status: 'DRAFT' | 'PUBLISHED'
+  pinned: boolean
+}
+
+export type ScheduleItem = {
+  id: number
+  teachingClassId: number
+  className: string
+  courseName: string
+  teacherName: string
+  dayOfWeek: number
+  startSection: number
+  endSection: number
+  startWeek: number
+  endWeek: number
+  classroom: string
+  location?: string
+}
+
+export type SchedulePayload = {
+  teachingClassId: number
+  dayOfWeek: number
+  startSection: number
+  endSection: number
+  startWeek: number
+  endWeek: number
+  classroom: string
+  location?: string
+}
+
+export type TrendPoint = {
+  label: string
+  attendanceAbnormalCount: number
+  warningCount: number
+  lowScoreCount: number
+}
+
+export type Weather = {
+  city: string
+  weather: string
+  temperature?: number
+  precipitation?: number
+  windSpeed?: number
+  observedAt: string
+  stale: boolean
+}
+
+export type SystemConfig = {
+  id: number
+  configKey: string
+  configName: string
+  configValue: string
+  description?: string
+}
+
+export type AdminUser = {
+  id: number
+  username: string
+  realName: string
+  userType: User['userType']
+  status: number
+  roles: string[]
+}
+
+export type AdminUserPayload = {
+  username: string
+  realName: string
+  userType: User['userType']
+  status: number
+  roleIds: number[]
+  password?: string
+}
+
+export type PasswordResetPayload = {
+  password: string
+}
+
+export type Role = {
+  id: number
+  code: string
+  name: string
+  dataScope: string
+}
+
+export type Permission = {
+  id: number
+  code: string
+  name: string
+  menuPath?: string
+  roleCode: string
 }

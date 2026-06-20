@@ -15,7 +15,7 @@ type DataTableProps<T> = {
 export function DataTable<T extends Record<string, unknown>>({ columns, rows }: DataTableProps<T>) {
   return (
     <div className="w-full max-w-full overflow-x-auto rounded-lg border border-[#d9dfd8]">
-      <table className="min-w-[560px] divide-y divide-[#d9dfd8] bg-white text-left text-sm">
+      <table className="w-full min-w-[560px] divide-y divide-[#d9dfd8] bg-white text-left text-sm">
         <thead className="bg-[#f2f5f1] text-xs font-semibold text-[#556273]">
           <tr>
             {columns.map((column) => <th key={String(column.key)} className="whitespace-nowrap px-4 py-3">{column.title}</th>)}
