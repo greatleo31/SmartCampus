@@ -11,12 +11,17 @@ import { useAuth } from '../hooks/useAuth'
 import { useDownloadProgress } from '../hooks/useDownloadProgress'
 import { saveBlob } from '../lib/download'
 
+type PageMessage = {
+  kind: 'info' | 'error'
+  text: string
+}
+
 export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const { user } = useAuth()
   const [selected, setSelected] = useState<number[]>([])
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<PageMessage | null>(null)
   const [teachingClassId, setTeachingClassId] = useState(0)
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(10)
@@ -40,16 +45,19 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
     mutationFn: (file: File) => campusApi.importGrades(file),
     onSuccess: async (result) => {
       await qc.invalidateQueries({ queryKey: ['grades'] })
-      setMessage(`导入成功 ${result.successCount} 行${result.errors.length ? `，失败 ${result.errors.length} 行：${result.errors.slice(0, 3).join('；')}` : ''}`)
+      setMessage({
+        kind: result.errors.length ? 'error' : 'info',
+        text: `导入成功 ${result.successCount} 行${result.errors.length ? `，失败 ${result.errors.length} 行：${result.errors.slice(0, 3).join('；')}` : ''}`,
+      })
     },
-    onError: (error) => setMessage(error.message),
+    onError: (error) => setMessage({ kind: 'error', text: error.message }),
   })
   const remove = useMutation({
     mutationFn: (ids: number[]) => campusApi.deleteGrades(ids),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['grades'] })
       setSelected([])
-      setMessage('已批量删除')
+      setMessage({ kind: 'info', text: '已批量删除' })
     },
   })
 
@@ -62,7 +70,7 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
       ))
       saveBlob(blob, filename)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '下载失败')
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : '下载失败' })
     }
   }
 
@@ -106,7 +114,7 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
           {isAdmin && <Button variant="danger" disabled={selected.length === 0} onClick={() => window.confirm('确认批量删除所选成绩？') && remove.mutate(selected)}><Trash2 size={16} />批量删除</Button>}
           <input ref={fileRef} className="hidden" type="file" accept=".xlsx" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload.mutate(file); event.currentTarget.value = '' }} />
         </div>
-        {message && <div className="mb-4 rounded-md border border-[#d9dfd8] bg-[#f8faf7] px-3 py-2 text-sm text-[#344256]">{message}</div>}
+        {message && <div className={`mb-4 rounded-md border px-3 py-2 text-sm ${message.kind === 'error' ? 'border-[#f1b5b5] bg-[#fff6f6] text-[#9f1d1d]' : 'border-[#d9dfd8] bg-[#f8faf7] text-[#344256]'}`}>{message.text}</div>}
         <DataTable
           rows={rows}
           columns={[

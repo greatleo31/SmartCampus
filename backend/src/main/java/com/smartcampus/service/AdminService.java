@@ -39,7 +39,9 @@ public class AdminService {
     }
 
     public List<AdminUserVO> users() {
-        return userMapper.selectList(new LambdaQueryWrapper<SysUser>().orderByDesc(SysUser::getId))
+        return userMapper.selectList(new LambdaQueryWrapper<SysUser>()
+                        .orderByAsc(SysUser::getCreateTime)
+                        .orderByAsc(SysUser::getId))
                 .stream().map(this::toAdminUser).toList();
     }
 

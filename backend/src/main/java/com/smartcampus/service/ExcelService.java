@@ -36,17 +36,20 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ExcelService {
+    private static final List<String> GRADE_IMPORT_HEADERS = List.of("教学班", "学生", "平时分", "期末分");
+    private static final List<String> ATTENDANCE_IMPORT_HEADERS = List.of("教学班", "学生", "考勤日期", "状态", "备注");
+
     private final TeachingService teachingService;
     private final TeachingClassMapper teachingClassMapper;
     private final StudentProfileMapper studentProfileMapper;
     private final SysUserMapper userMapper;
 
     public byte[] gradeTemplate() {
-        return workbook("成绩导入模板", List.of("教学班", "学生", "平时分", "期末分"), List.of());
+        return workbook("成绩导入模板", GRADE_IMPORT_HEADERS, List.of());
     }
 
     public byte[] attendanceTemplate() {
-        return workbook("考勤导入模板", List.of("教学班", "学生", "考勤日期", "状态", "备注"), List.of());
+        return workbook("考勤导入模板", ATTENDANCE_IMPORT_HEADERS, List.of());
     }
 
     public byte[] exportGrades() {
@@ -86,7 +89,8 @@ public class ExcelService {
 
     public ImportResultVO importGrades(MultipartFile file) {
         Workbook workbook = read(file);
-        Sheet sheet = workbook.getSheetAt(0);
+        Sheet sheet = firstSheet(workbook);
+        validateHeaders(sheet, GRADE_IMPORT_HEADERS);
         List<String> errors = new ArrayList<>();
         int success = 0;
         for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
@@ -111,7 +115,8 @@ public class ExcelService {
 
     public ImportResultVO importAttendance(MultipartFile file) {
         Workbook workbook = read(file);
-        Sheet sheet = workbook.getSheetAt(0);
+        Sheet sheet = firstSheet(workbook);
+        validateHeaders(sheet, ATTENDANCE_IMPORT_HEADERS);
         List<String> errors = new ArrayList<>();
         int success = 0;
         for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
@@ -179,6 +184,45 @@ public class ExcelService {
         } catch (IOException ex) {
             throw new BizException(400, "读取 XLSX 失败");
         }
+    }
+
+    private Sheet firstSheet(Workbook workbook) {
+        if (workbook.getNumberOfSheets() == 0) {
+            throw templateMismatch("模板表头缺失");
+        }
+        return workbook.getSheetAt(0);
+    }
+
+    private void validateHeaders(Sheet sheet, List<String> expectedHeaders) {
+        Row header = sheet.getRow(0);
+        if (header == null) {
+            throw templateMismatch("模板表头缺失");
+        }
+        int actualColumns = effectiveColumnCount(header);
+        if (actualColumns != expectedHeaders.size()) {
+            throw templateMismatch("应为" + expectedHeaders.size() + "列，实际" + actualColumns + "列");
+        }
+        for (int i = 0; i < expectedHeaders.size(); i++) {
+            String expected = expectedHeaders.get(i);
+            String actual = stringValue(header, i);
+            if (!expected.equals(actual)) {
+                throw templateMismatch("第" + (i + 1) + "列应为" + expected + "，实际为" + (actual.isBlank() ? "空" : actual));
+            }
+        }
+    }
+
+    private int effectiveColumnCount(Row row) {
+        int lastCellNum = Math.max(row.getLastCellNum(), 0);
+        for (int i = lastCellNum - 1; i >= 0; i--) {
+            if (!stringValue(row, i).isBlank()) {
+                return i + 1;
+            }
+        }
+        return 0;
+    }
+
+    private BizException templateMismatch(String detail) {
+        return new BizException(400, "导入模板不匹配：" + detail + "，请下载最新模板后再导入");
     }
 
     private boolean empty(Row row) {

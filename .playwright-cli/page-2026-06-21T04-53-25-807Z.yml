@@ -1,0 +1,558 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic:
+      - generic: Database Course Design
+      - generic: SmartCampus Management System
+    - generic:
+      - text: "01"
+      - paragraph: 数据库课程设计答辩
+      - heading "SmartCampus 通用高校教务系统" [level=1]
+      - paragraph: 面向高校教务管理场景的数据库应用系统
+      - generic:
+        - heading "汇报人：陈志杰 / 段瑞 / 贺宇轩 / 胡衍科" [level=3]
+        - paragraph: 24 软件工程 3 班
+    - generic:
+      - text: "02"
+      - paragraph: 汇报目录
+      - heading "答辩内容按课程设计报告逻辑展开。" [level=2]
+      - generic:
+        - generic:
+          - heading "01 需求分析" [level=4]
+          - paragraph: 教务痛点、三类角色、拟解决方案和数据库设计入口。
+        - generic:
+          - heading "02 数据库设计" [level=4]
+          - paragraph: 设计流程、课程表重点流程、核心表、视图与约束索引。
+        - generic:
+          - heading "03 应用程序" [level=4]
+          - paragraph: 后端分层架构、前端 React + Axios、页面如何落到数据库。
+        - generic:
+          - heading "04 协作与总结" [level=4]
+          - paragraph: 小组分工、项目总结和后续扩展。
+    - generic [ref=e3]:
+      - text: "03"
+      - paragraph [ref=e4]: 需求分析：实际痛点
+      - heading "系统要解决的是高校教务数据分散、角色边界不清和过程追踪困难的问题。" [level=2] [ref=e5]
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - heading "数据分散" [level=4] [ref=e8]
+          - paragraph [ref=e9]: 用户、学院、专业、行政班、课程、教学班、课表、成绩、考勤和预警数据容易散落在不同表格或人工记录中。
+        - generic [ref=e10]:
+          - heading "角色协作弱" [level=4] [ref=e11]
+          - paragraph [ref=e12]: 管理员、教师、学生关注的数据不同，需要统一权限边界和同一套基础教务数据。
+        - generic [ref=e13]:
+          - heading "过程追踪难" [level=4] [ref=e14]
+          - paragraph [ref=e15]: 成绩、考勤、课表和预警等过程数据如果不结构化，后续统计和追溯成本高。
+      - generic [ref=e17]:
+        - generic [ref=e18]: 核心需求
+        - text: 可维护、可查询、可统计、可导入导出、可按角色和数据范围控制访问。
+    - generic:
+      - text: "04"
+      - paragraph: 需求分析：拟解决方案
+      - heading "解决方案是按管理员、教师、学生划分功能，再把功能落到数据库表和接口。" [level=2]
+      - generic:
+        - generic:
+          - heading "管理员" [level=3]
+          - paragraph: 负责用户、角色、权限、公告、系统配置和基础教务数据管理。
+          - generic:
+            - generic: sys_user
+            - generic: college
+            - generic: sys_permission
+            - generic: announcement
+          - paragraph: 权限落点：账号、角色、权限码、权限菜单路径和系统配置。
+        - generic:
+          - heading "教师" [level=3]
+          - paragraph: 负责本人教学班课表、成绩、考勤和学业预警管理。
+          - generic:
+            - generic: teaching_class
+            - generic: student_profile
+            - generic: attendance_record
+            - generic: academic_warning
+            - generic: academic_warning
+          - paragraph: 权限落点：按教学班和学生名单组织过程数据。
+        - generic:
+          - heading "学生" [level=3]
+          - paragraph: 查看本人课程、课表、校历、成绩、绩点、考试、补考和预警。
+          - generic:
+            - generic: course
+            - generic: class_schedule
+            - generic: grade_record
+            - generic: schedule
+          - paragraph: 权限落点：按当前登录学生过滤本人查询数据。
+    - generic:
+      - text: "05"
+      - paragraph: 数据库设计流程总览
+      - heading "数据库设计从教务业务对象推导实体，再落成逻辑表、视图和约束。" [level=2]
+      - generic:
+        - generic:
+          - generic:
+            - generic: 业务对象
+            - generic: 学期、课程、教学班、学生、课表、成绩、考勤、预警等管理对象
+          - generic:
+            - generic: 实体关系
+            - generic: 确认一对多、多对多和过程记录关系
+          - generic:
+            - generic: 逻辑表
+            - generic: 确定表名、字段、类型、唯一约束、索引和逻辑删除
+          - generic:
+            - generic: 约束索引
+            - generic: 主键、唯一约束、查询索引和导入防重复
+        - generic:
+          - generic: 设计流程顺序
+    - generic:
+      - text: "06"
+      - paragraph: 课程表设计流程 I：业务对象到实体关系
+      - heading "课程先作为教学资源实体，再连接教学班、课表和成绩。" [level=2]
+      - generic:
+        - generic:
+          - generic: 业务对象
+          - generic: 课程：课程编码、名称、学分、学时
+        - generic:
+          - generic: course 实体
+          - generic: code / name / credit / hours
+        - generic:
+          - generic:
+            - generic: class_schedule
+            - generic: 教学班关联课程
+          - generic:
+            - generic: grade_record
+            - generic: 成绩按课程和教学班统计
+          - generic:
+            - generic: schedule
+            - generic: 课表安排课程
+      - generic:
+        - generic:
+          - generic: 为什么单独建 course
+          - text: 课程会被教学班、课表和成绩重复引用，如果只写在成绩表中会造成课程名称重复和维护困难。
+        - generic:
+          - generic: 实体边界
+          - text: 课程保存稳定的教学资源信息；教学班、成绩、课表保存围绕课程发生的业务记录。
+    - generic:
+      - text: "07"
+      - paragraph: 课程表设计流程 II：逻辑表到约束索引
+      - heading "course 表保留课程基础信息，并通过唯一编码、学院关联和逻辑删除维护。" [level=2]
+      - generic:
+        - table:
+          - rowgroup:
+            - row "字段（数据类型） 设计含义":
+              - columnheader "字段（数据类型）"
+              - columnheader "设计含义"
+          - rowgroup:
+            - row "id（INT UNSIGNED） 课程主键，自增生成，用于被教学班、成绩、课表等业务记录引用。":
+              - cell "id（INT UNSIGNED）":
+                - code: id
+                - text: （INT UNSIGNED）
+              - cell "课程主键，自增生成，用于被教学班、成绩、课表等业务记录引用。"
+            - row "name（VARCHAR(100)） 课程名称，例如数据库系统、软件工程，是页面展示和下拉选择的核心字段。":
+              - cell "name（VARCHAR(100)）":
+                - code: name
+                - text: （VARCHAR(100)）
+              - cell "课程名称，例如数据库系统、软件工程，是页面展示和下拉选择的核心字段。"
+            - row "college_id（TINYINT UNSIGNED） 课程所属学院和课程性质，支撑课程归类、筛选和统计。":
+              - cell "college_id（TINYINT UNSIGNED）":
+                - code: college_id
+                - text: （TINYINT UNSIGNED）
+              - cell "课程所属学院和课程性质，支撑课程归类、筛选和统计。"
+            - row "hours（INT UNSIGNED） 课程学时，表示课程计划时长，为教学安排和课表编排提供参考。":
+              - cell "hours（INT UNSIGNED）":
+                - code: hours
+                - text: （INT UNSIGNED）
+              - cell "课程学时，表示课程计划时长，为教学安排和课表编排提供参考。"
+            - row "description（VARCHAR(500)） 课程别名或补充说明，保存课程展示名称和扩展信息。":
+              - cell "description（VARCHAR(500)）":
+                - code: description
+                - text: （VARCHAR(500)）
+              - cell "课程别名或补充说明，保存课程展示名称和扩展信息。"
+            - row "create_time（DATETIME） 记录课程创建时间，方便追踪基础数据产生时间。":
+              - cell "create_time（DATETIME）":
+                - code: create_time
+                - text: （DATETIME）
+              - cell "记录课程创建时间，方便追踪基础数据产生时间。"
+            - row "update_time（DATETIME） 记录课程最后修改时间，方便维护和排查数据变更。":
+              - cell "update_time（DATETIME）":
+                - code: update_time
+                - text: （DATETIME）
+              - cell "记录课程最后修改时间，方便维护和排查数据变更。"
+            - row "deleted（TINYINT UNSIGNED） 逻辑删除标记，0 未删除、1 已删除，删除课程时保留历史引用。":
+              - cell "deleted（TINYINT UNSIGNED）":
+                - code: deleted
+                - text: （TINYINT UNSIGNED）
+              - cell "逻辑删除标记，0 未删除、1 已删除，删除课程时保留历史引用。"
+    - generic:
+      - text: "08"
+      - paragraph: 其他展示表 ER 图
+      - heading "学生档案与学业预警表字段完整展示。" [level=2]
+      - generic:
+        - generic:
+          - img "student 学员表字段完整 ER 图":
+            - generic: E
+            - generic: student_profile 学生档案表
+            - generic: id INT UNSIGNED PK "ID, 主键"
+            - generic: name VARCHAR(10) NOT NULL "姓名"
+            - generic: no CHAR(10) NOT NULL UNIQUE "学号"
+            - generic: "gender TINYINT UNSIGNED NOT NULL \"性别: 1男 2女\""
+            - generic: phone VARCHAR(11) NOT NULL UNIQUE "手机号"
+            - generic: id_card CHAR(18) NOT NULL UNIQUE "身份证号"
+            - generic: is_college TINYINT UNSIGNED NOT NULL "是否来自院校"
+            - generic: address VARCHAR(100) DEFAULT NULL "联系地址"
+            - generic: degree TINYINT UNSIGNED DEFAULT NULL "最高学历"
+            - generic: graduation_date DATETIME DEFAULT NULL "毕业时间"
+            - generic: teaching_class_id INT UNSIGNED NOT NULL "教学班ID, 关联 teaching_class"
+            - generic: academic_warning_count TINYINT UNSIGNED NOT NULL DEFAULT 0 "预警次数"
+            - generic: academic_warning_grade_record TINYINT UNSIGNED NOT NULL DEFAULT 0 "预警扣分"
+            - generic: create_time DATETIME DEFAULT NULL "创建时间"
+            - generic: update_time DATETIME DEFAULT NULL "修改时间"
+            - generic: deleted TINYINT UNSIGNED DEFAULT 0 "逻辑删除"
+            - generic: "唯一索引: uk_student_profile_no, uk_student_profile_phone, uk_student_profile_id_card"
+            - generic: "普通索引: idx_student_profile_teaching_class_id(teaching_class_id)"
+            - generic: E
+            - generic: teaching_class
+            - generic: id INT UNSIGNED PK
+            - generic: name VARCHAR(30)
+            - generic: E
+            - generic: grade_record
+            - generic: id INT UNSIGNED PK
+            - generic: student_profile_id INT
+            - generic: 成绩记录
+            - generic: E
+            - generic: attendance_record
+            - generic: id INT UNSIGNED PK
+            - generic: student_profile_id INT
+            - generic: uk_student_profile_date
+            - generic: E
+            - generic: academic_warning
+            - generic: id INT UNSIGNED PK
+            - generic: student_profile_id INT
+            - generic: 预警明细
+            - generic: E
+            - generic: employment
+            - generic: student_profile_id INT "学生ID"
+            - generic: 所属教学班
+            - generic: 成绩记录
+            - generic: 考勤记录
+            - generic: 学业预警
+            - generic: 就业跟踪
+        - generic:
+          - img "violation 违纪记录表字段完整 ER 图":
+            - generic: E
+            - generic: academic_warning 学业预警表
+            - generic: id INT UNSIGNED PK "ID, 主键"
+            - generic: student_profile_id INT UNSIGNED NOT NULL "学生ID, 关联 student_profile"
+            - generic: academic_warning_id INT UNSIGNED NOT NULL "预警等级ID"
+            - generic: deduction_grade_record INT UNSIGNED NOT NULL "扣分"
+            - generic: description VARCHAR(500) DEFAULT NULL "预警详情"
+            - generic: handler_id INT UNSIGNED DEFAULT NULL "处理人ID(教师)"
+            - generic: academic_warning_time DATETIME DEFAULT NULL "预警时间"
+            - generic: create_time DATETIME DEFAULT NULL "创建时间"
+            - generic: update_time DATETIME DEFAULT NULL "修改时间"
+            - generic: deleted TINYINT UNSIGNED NOT NULL DEFAULT 0 "逻辑删除"
+            - generic: "索引: idx_academic_warning_student_profile_id(student_profile_id)"
+            - generic: "索引: idx_academic_warning_id(academic_warning_id)"
+            - generic: "索引: idx_academic_warning_handler_id(handler_id)"
+            - generic: E
+            - generic: student_profile
+            - generic: id INT UNSIGNED PK
+            - generic: name / no / teaching_class_id
+            - generic: 预警次数和扣分汇总
+            - generic: E
+            - generic: academic_warning
+            - generic: id INT UNSIGNED PK
+            - generic: type_name / deduction_grade_record
+            - generic: uk_academic_warning_name
+            - generic: E
+            - generic: sys_user
+            - generic: id INT UNSIGNED PK
+            - generic: name / job
+            - generic: handler_id 处理人
+            - generic: E
+            - generic: sys_permission
+            - generic: id INT UNSIGNED PK
+            - generic: path / job
+            - generic: 控制预警权限菜单访问
+            - generic: 关联学生
+            - generic: 预警等级
+            - generic: 处理人
+            - generic: 权限入口
+    - generic:
+      - text: "09"
+      - paragraph: 其他展示表 ER 图
+      - heading "系统用户与权限表字段完整展示。" [level=2]
+      - generic:
+        - generic:
+          - img "emp 员工表字段完整 ER 图":
+            - generic: E
+            - generic: sys_user 用户表
+            - generic: id INT UNSIGNED PK "ID, 主键"
+            - generic: username VARCHAR(20) NOT NULL UNIQUE "用户名"
+            - generic: password VARCHAR(50) DEFAULT '123456' "密码"
+            - generic: name VARCHAR(10) NOT NULL "姓名"
+            - generic: "gender TINYINT UNSIGNED NOT NULL \"性别: 1男 2女\""
+            - generic: phone CHAR(11) NOT NULL UNIQUE "手机号"
+            - generic: "job TINYINT UNSIGNED DEFAULT NULL \"职位: 1教师 2教师 3管理员\""
+            - generic: salary INT UNSIGNED DEFAULT NULL "薪资"
+            - generic: image VARCHAR(300) DEFAULT NULL "头像"
+            - generic: entry_date DATE DEFAULT NULL "入职日期"
+            - generic: college_id INT UNSIGNED DEFAULT NULL "学院ID, 关联 college"
+            - generic: create_time DATETIME DEFAULT NULL "创建时间"
+            - generic: update_time DATETIME DEFAULT NULL "修改时间"
+            - generic: deleted TINYINT UNSIGNED NOT NULL DEFAULT 0 "逻辑删除"
+            - generic: "唯一索引: uk_sys_user_username(username), uk_sys_user_phone(phone)"
+            - generic: "普通索引: idx_sys_user_college_id(college_id)"
+            - generic: E
+            - generic: college
+            - generic: id INT UNSIGNED PK
+            - generic: name VARCHAR(10)
+            - generic: E
+            - generic: sys_user_expr
+            - generic: sys_user_id INT
+            - generic: begin / end / company
+            - generic: idx_sys_user_expr_sys_user_id
+            - generic: E
+            - generic: sys_user_attendance_record
+            - generic: sys_user_id INT
+            - generic: attendance_record_date / status
+            - generic: uk_sys_user_attendance_record_sys_user_date
+            - generic: E
+            - generic: announcement
+            - generic: publisher_id INT "发布人ID"
+            - generic: E
+            - generic: teaching_class
+            - generic: master_id INT
+            - generic: 教师关联
+            - generic: 所属学院
+            - generic: 工作经历
+            - generic: 考勤记录
+            - generic: 公告发布
+            - generic: 担任教师
+        - generic:
+          - img "menu 菜单表字段完整 ER 图":
+            - generic: E
+            - generic: sys_permission 权限菜单表
+            - generic: id INT UNSIGNED PK "ID, 主键"
+            - generic: sys_permission_name VARCHAR(50) NOT NULL "权限菜单名称"
+            - generic: path VARCHAR(100) DEFAULT NULL "路径"
+            - generic: parent_id INT UNSIGNED DEFAULT 0 "父级ID, 0表示顶级权限菜单"
+            - generic: order_num INT UNSIGNED DEFAULT 0 "排序号"
+            - generic: job VARCHAR(20) DEFAULT NULL "可访问job值, 如 1,2,3"
+            - generic: create_time DATETIME DEFAULT NULL "创建时间"
+            - generic: update_time DATETIME DEFAULT NULL "修改时间"
+            - generic: deleted TINYINT UNSIGNED NOT NULL DEFAULT 0 "逻辑删除"
+            - generic: "索引: idx_sys_permission_parent_id(parent_id)"
+            - generic: "角色匹配: job 字段保存可访问职位值，逗号分隔"
+            - generic: E
+            - generic: sys_user
+            - generic: id INT UNSIGNED PK
+            - generic: username / job
+            - generic: 登录用户角色
+            - generic: E
+            - generic: sys_permission parent
+            - generic: id INT UNSIGNED PK
+            - generic: parent_id 指向 sys_permission.id
+            - generic: 权限菜单树结构
+            - generic: E
+            - generic: announcement
+            - generic: target_role TINYINT "目标角色"
+            - generic: job 匹配权限菜单
+            - generic: parent_id 自关联
+            - generic: 同类角色面向公告
+    - generic:
+      - text: "10"
+      - paragraph: 其他展示表 ER 图
+      - heading "教学班与成绩表字段完整展示。" [level=2]
+      - generic:
+        - generic:
+          - img "clazz 班级表字段完整 ER 图":
+            - generic: E
+            - generic: teaching_class 教学班表
+            - generic: id INT UNSIGNED PK "ID, 主键"
+            - generic: name VARCHAR(30) NOT NULL UNIQUE "教学班名称"
+            - generic: room VARCHAR(20) DEFAULT NULL "教学班教室"
+            - generic: begin_date DATE NOT NULL "开课时间"
+            - generic: end_date DATE NOT NULL "结课时间"
+            - generic: master_id INT UNSIGNED DEFAULT NULL "教师ID, 关联 sys_user"
+            - generic: "college_id TINYINT UNSIGNED NOT NULL \"学科: 1Java 2前端 3大数据 4Python 5Go 6嵌入式\""
+            - generic: create_time DATETIME DEFAULT NULL "创建时间"
+            - generic: update_time DATETIME DEFAULT NULL "修改时间"
+            - generic: deleted TINYINT UNSIGNED NOT NULL DEFAULT 0 "逻辑删除"
+            - generic: "唯一索引: uk_teaching_class_name(name)"
+            - generic: "普通索引: idx_teaching_class_master_id(master_id)"
+            - generic: E
+            - generic: sys_user
+            - generic: id INT UNSIGNED PK
+            - generic: name / job
+            - generic: master_id 教师
+            - generic: E
+            - generic: student_profile
+            - generic: teaching_class_id INT
+            - generic: 教学班下属学生
+            - generic: E
+            - generic: schedule
+            - generic: teaching_class_id INT
+            - generic: 课表安排
+            - generic: E
+            - generic: grade_record / class_schedule
+            - generic: teaching_class_id INT
+            - generic: 考试与成绩归属
+            - generic: 教师
+            - generic: 教学班学生
+            - generic: 课表关联
+            - generic: 考试成绩
+        - generic:
+          - img "score 成绩表字段完整 ER 图":
+            - generic: E
+            - generic: grade_record 成绩记录表
+            - generic: id INT UNSIGNED PK "ID, 主键"
+            - generic: student_profile_id INT UNSIGNED NOT NULL "学生ID, 关联 student_profile"
+            - generic: teaching_class_id INT UNSIGNED NOT NULL "教学班ID, 关联 teaching_class"
+            - generic: course_id INT UNSIGNED DEFAULT NULL "课程ID, 关联 course"
+            - generic: class_schedule_id INT UNSIGNED DEFAULT NULL "考试ID, 关联 class_schedule"
+            - generic: class_schedule_name VARCHAR(100) DEFAULT NULL "考试名称"
+            - generic: grade_record INT UNSIGNED DEFAULT NULL "分数"
+            - generic: class_schedule_date DATETIME DEFAULT NULL "考试日期"
+            - generic: remark VARCHAR(500) DEFAULT NULL "备注"
+            - generic: create_time DATETIME DEFAULT NULL "创建时间"
+            - generic: update_time DATETIME DEFAULT NULL "修改时间"
+            - generic: deleted TINYINT UNSIGNED NOT NULL DEFAULT 0 "逻辑删除"
+            - generic: "索引: idx_grade_record_student_profile_id(student_profile_id), idx_grade_record_teaching_class_id(teaching_class_id)"
+            - generic: "索引: idx_grade_record_course_id(course_id), idx_grade_record_class_schedule_id(class_schedule_id)"
+            - generic: E
+            - generic: student_profile
+            - generic: id INT UNSIGNED PK
+            - generic: name / no
+            - generic: 成绩所属学生
+            - generic: E
+            - generic: teaching_class
+            - generic: id INT UNSIGNED PK
+            - generic: name
+            - generic: 成绩所属教学班
+            - generic: E
+            - generic: course
+            - generic: id INT UNSIGNED PK
+            - generic: name
+            - generic: 课程成绩
+            - generic: E
+            - generic: class_schedule
+            - generic: id INT UNSIGNED PK
+            - generic: class_schedule_name / class_schedule_date
+            - generic: 考试成绩
+            - generic: 学生
+            - generic: 教学班
+            - generic: 课程
+            - generic: 考试
+    - generic:
+      - text: "11"
+      - paragraph: 后端框架和设计
+      - heading "后端采用 Spring Boot + Spring Security + MyBatis-Plus 的分层结构。" [level=2]
+      - generic:
+        - generic:
+          - generic:
+            - generic: Controller
+            - text: 接收 REST 请求，校验权限，统一返回 ApiResponse。
+          - generic:
+            - generic: Service
+            - text: 封装业务逻辑：数据范围、导入导出、统计、分页、逻辑删除。
+          - generic:
+            - generic: Mapper
+            - text: 通过 MyBatis-Plus 访问 MySQL 表结构。
+          - generic:
+            - generic: Database
+            - text: schema.sql、views.sql、data.sql 建库建表、创建视图并提供演示数据。
+        - generic:
+          - generic:
+            - heading "Spring Boot 3.3.7" [level=4]
+            - paragraph: 后端基础框架与接口组织。
+          - generic:
+            - heading "MyBatis-Plus" [level=4]
+            - paragraph: 对象和数据表映射，支持分页与条件查询。
+          - generic:
+            - heading "JWT + Security" [level=4]
+            - paragraph: Token 登录、接口拦截、角色权限和数据范围控制。
+          - generic:
+            - heading "Knife4j / POI" [level=4]
+            - paragraph: 接口文档、Excel 模板、导入和导出能力。
+    - generic:
+      - text: "12"
+      - paragraph: 前端框架和设计
+      - heading "前端采用 React + Axios + TanStack Query 的标准管理端开发流程。" [level=2]
+      - generic:
+        - generic:
+          - generic:
+            - generic: Pages
+            - text: 页面表格、筛选表单、弹窗、导入导出按钮，承接具体业务操作。
+          - generic:
+            - generic: React Router
+            - text: 登录后进入 AppShell，根据后端菜单访问课表、课程、成绩、考勤等页面。
+          - generic:
+            - generic: Axios
+            - text: 统一封装请求，携带 Token，集中处理响应和错误提示。
+          - generic:
+            - generic: REST API
+            - text: 调用后端资源接口，最终完成数据库读写。
+        - generic:
+          - generic:
+            - heading "React 19" [level=4]
+            - paragraph: 组件化组织管理端页面。
+          - generic:
+            - heading "AuthProvider" [level=4]
+            - paragraph: 保存用户信息、Token 和登录状态。
+          - generic:
+            - heading "Tailwind CSS" [level=4]
+            - paragraph: 配合本地 UI 组件实现表格、表单、弹窗和按钮。
+          - generic:
+            - heading "TanStack Query" [level=4]
+            - paragraph: 管理服务端状态，支撑列表查询、刷新和加载状态。
+    - generic:
+      - text: "13"
+      - paragraph: 小组工作总结
+      - heading "小组成员与组内分工。" [level=2]
+      - generic:
+        - table:
+          - rowgroup:
+            - row "学号 姓名 组内分工 工作量比例 主要工作 协作方式":
+              - columnheader "学号"
+              - columnheader "姓名"
+              - columnheader "组内分工"
+              - columnheader "工作量比例"
+              - columnheader "主要工作"
+              - columnheader "协作方式"
+          - rowgroup:
+            - row "202425220304 陈志杰 前端页面开发 25% 完成主要管理页面、列表表格、表单弹窗和页面交互。 根据接口字段完成页面联调。":
+              - cell "202425220304"
+              - cell "陈志杰"
+              - cell "前端页面开发"
+              - cell "25%"
+              - cell "完成主要管理页面、列表表格、表单弹窗和页面交互。"
+              - cell "根据接口字段完成页面联调。"
+            - row "202425220306 段瑞 后端业务实现、接口联调 25% 完成业务接口、分页查询、导入导出和前后端联调。 对接前端请求和数据库字段。":
+              - cell "202425220306"
+              - cell "段瑞"
+              - cell "后端业务实现、接口联调"
+              - cell "25%"
+              - cell "完成业务接口、分页查询、导入导出和前后端联调。"
+              - cell "对接前端请求和数据库字段。"
+            - row "202425220307 贺宇轩 前端功能完善、测试文档 20% 完善前端细节、整理测试过程和演示材料。 配合测试页面流程和演示账号。":
+              - cell "202425220307"
+              - cell "贺宇轩"
+              - cell "前端功能完善、测试文档"
+              - cell "20%"
+              - cell "完善前端细节、整理测试过程和演示材料。"
+              - cell "配合测试页面流程和演示账号。"
+            - row "202425220308 胡衍科 后端开发、数据库设计 30% 设计核心表结构、约束索引和视图，完成部分后端模块。 统一数据库字段、接口参数和答辩讲解路径。":
+              - cell "202425220308"
+              - cell "胡衍科"
+              - cell "后端开发、数据库设计"
+              - cell "30%"
+              - cell "设计核心表结构、约束索引和视图，完成部分后端模块。"
+              - cell "统一数据库字段、接口参数和答辩讲解路径。"
+    - generic:
+      - text: "14"
+      - generic:
+        - paragraph: Thank You
+        - heading "谢谢观看" [level=1]
+        - paragraph: 请老师和同学批评指正
+    - generic:
+      - generic: SmartCampus 通用高校教务系统课程设计报告
+      - generic: 3 / 14
+  - paragraph [ref=e22]:
+    - strong [ref=e23]: 痛点。
+    - text: 这一页把原来空泛的“场景”和“核心问题”合并。重点是说明为什么需要数据库系统：不是因为要做页面，而是因为业务对象多、数据关系多、角色协作多，必须有统一的数据结构。
+  - text: 01 02 03 04 05 06 07 08 09 10 11 12 13 14
