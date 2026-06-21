@@ -5,8 +5,10 @@ import { campusApi } from '../api/campus'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { DataTable } from '../components/ui/DataTable'
+import { ExportProgressOverlay } from '../components/ui/ExportProgressOverlay'
 import { PaginationBar } from '../components/ui/PaginationBar'
 import { useAuth } from '../hooks/useAuth'
+import { useDownloadProgress } from '../hooks/useDownloadProgress'
 import { saveBlob } from '../lib/download'
 
 export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
@@ -20,6 +22,7 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
   const [size, setSize] = useState(10)
   const [year, setYear] = useState('')
   const [term, setTerm] = useState(2)
+  const { downloadProgress, runWithProgress } = useDownloadProgress()
   const isAdmin = adminMode || user?.userType === 'ADMIN'
   const { data: teachingClasses } = useQuery({ queryKey: ['teachingClasses'], queryFn: () => campusApi.teachingClasses() })
   const { data: calendarOptions = [] } = useQuery({ queryKey: ['calendarOptions'], queryFn: campusApi.calendarOptions })
@@ -51,8 +54,16 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
   })
 
   async function download(kind: 'template' | 'export') {
-    const blob = kind === 'template' ? await campusApi.gradeTemplate() : await campusApi.exportGrades()
-    saveBlob(blob, kind === 'template' ? '成绩导入模板.xlsx' : '成绩数据.xlsx')
+    const label = kind === 'template' ? '正在下载成绩模板' : '正在导出成绩数据'
+    const filename = kind === 'template' ? '成绩导入模板.xlsx' : '成绩数据.xlsx'
+    try {
+      const blob = await runWithProgress(label, (onProgress) => (
+        kind === 'template' ? campusApi.gradeTemplate(onProgress) : campusApi.exportGrades(onProgress)
+      ))
+      saveBlob(blob, filename)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '下载失败')
+    }
   }
 
   const yearOptions = Array.from(new Set(calendarOptions.map((item) => item.academicYear)))
@@ -65,7 +76,7 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
       <div>
         <h1 className="text-2xl font-semibold text-[#172235]">成绩管理</h1>
       </div>
-      <Card className="p-5">
+      <Card className="relative p-5">
         <div className="mb-4 grid gap-3 md:grid-cols-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#556273]">教学班</span>
@@ -89,8 +100,8 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
           </label>
         </div>
         <div className="mb-4 flex flex-wrap items-end gap-2">
-          <Button variant="secondary" onClick={() => download('template')}><FileDown size={16} />下载模板</Button>
-          <Button variant="secondary" onClick={() => download('export')}><Download size={16} />导出 XLSX</Button>
+          <Button variant="secondary" disabled={Boolean(downloadProgress)} onClick={() => download('template')}><FileDown size={16} />下载模板</Button>
+          <Button variant="secondary" disabled={Boolean(downloadProgress)} onClick={() => download('export')}><Download size={16} />导出 XLSX</Button>
           <Button onClick={() => fileRef.current?.click()}><FileUp size={16} />导入 XLSX</Button>
           {isAdmin && <Button variant="danger" disabled={selected.length === 0} onClick={() => window.confirm('确认批量删除所选成绩？') && remove.mutate(selected)}><Trash2 size={16} />批量删除</Button>}
           <input ref={fileRef} className="hidden" type="file" accept=".xlsx" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload.mutate(file); event.currentTarget.value = '' }} />
@@ -111,6 +122,7 @@ export function GradesPage({ adminMode = false }: { adminMode?: boolean }) {
           ]}
         />
         <PaginationBar total={data?.total ?? 0} page={data?.page ?? page} size={data?.size ?? size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
+        <ExportProgressOverlay progress={downloadProgress} />
       </Card>
     </div>
   )

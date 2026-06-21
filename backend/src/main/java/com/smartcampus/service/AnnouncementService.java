@@ -16,20 +16,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AnnouncementService {
     private final AnnouncementMapper announcementMapper;
+    private final LocalCacheService localCacheService;
 
     public List<Announcement> published(String category) {
-        return announcementMapper.selectList(new LambdaQueryWrapper<Announcement>()
-                .eq(Announcement::getStatus, "PUBLISHED")
-                .eq(category != null && !category.isBlank(), Announcement::getCategory, category)
-                .orderByDesc(Announcement::getPinned)
-                .orderByDesc(Announcement::getPublishTime)
-                .last("limit 20"));
+        return localCacheService.normalTtl(localCacheService.key("announcements:published", category), () ->
+                announcementMapper.selectList(new LambdaQueryWrapper<Announcement>()
+                        .eq(Announcement::getStatus, "PUBLISHED")
+                        .eq(category != null && !category.isBlank(), Announcement::getCategory, category)
+                        .orderByDesc(Announcement::getPinned)
+                        .orderByDesc(Announcement::getPublishTime)
+                        .last("limit 20")));
     }
 
     public List<Announcement> all() {
-        return announcementMapper.selectList(new LambdaQueryWrapper<Announcement>()
-                .orderByDesc(Announcement::getPinned)
-                .orderByDesc(Announcement::getPublishTime));
+        return localCacheService.normalTtl(localCacheService.key("announcements:all"), () ->
+                announcementMapper.selectList(new LambdaQueryWrapper<Announcement>()
+                        .orderByDesc(Announcement::getPinned)
+                        .orderByDesc(Announcement::getPublishTime)));
     }
 
     public Announcement save(Long id, AnnouncementRequest request) {
@@ -58,12 +61,14 @@ public class AnnouncementService {
         } else {
             announcementMapper.updateById(announcement);
         }
+        localCacheService.invalidatePrefix("announcements");
         return announcement;
     }
 
     public void delete(Long id) {
         require(id);
         announcementMapper.deleteById(id);
+        localCacheService.invalidatePrefix("announcements");
     }
 
     private Announcement require(Long id) {

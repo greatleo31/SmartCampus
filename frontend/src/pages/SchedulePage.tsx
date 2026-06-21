@@ -11,7 +11,16 @@ import type { ScheduleItem } from '../types/api'
 
 const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 const sections = Array.from({ length: 14 }, (_, index) => index + 1)
-const palette = ['#d9f0e5', '#e5eefb', '#fff0c2', '#f4e8ff', '#fde7df', '#e2f5f2']
+const palette = [
+  { bg: '#d9f0e5', border: '#8bc7ad', text: '#0f6b4f' },
+  { bg: '#e5eefb', border: '#9cb9e4', text: '#1d4f91' },
+  { bg: '#fff0c2', border: '#dfbd5d', text: '#806012' },
+  { bg: '#f4e8ff', border: '#c8a5e6', text: '#6d3b91' },
+  { bg: '#fde7df', border: '#e4a38f', text: '#9b3d28' },
+  { bg: '#e2f5f2', border: '#91c9c1', text: '#247067' },
+  { bg: '#edf0ff', border: '#a8b1e6', text: '#36428a' },
+  { bg: '#f0eadf', border: '#c9ad7a', text: '#72542b' },
+]
 
 export function SchedulePage({ title = '个人课表', scope = 'personal' }: { title?: string; scope?: 'personal' | 'class' }) {
   const { data = [] } = useQuery({
@@ -104,24 +113,28 @@ export function SchedulePage({ title = '个人课表', scope = 'personal' }: { t
               {days.map((_, dayIndex) => (
                 <div key={dayIndex} className="relative grid border-r border-[#d9dfd8]" style={{ gridTemplateRows: `repeat(14, 4rem)` }}>
                   {sections.map((section) => <div key={section} className="border-b border-[#edf0eb] bg-white" />)}
-                  {(byDay.get(dayIndex + 1) ?? []).map((item, index) => (
-                    <button
-                      key={item.id}
-                      className="absolute left-1 right-1 overflow-hidden rounded-md border border-white/70 px-2 py-2 text-left text-xs leading-5 text-[#172235] shadow-sm transition hover:shadow-md"
-                      style={{
-                        top: `${(item.startSection - 1) * 4 + 0.25}rem`,
-                        height: `${(item.endSection - item.startSection + 1) * 4 - 0.5}rem`,
-                        background: palette[index % palette.length],
-                      }}
-                      title={`${item.courseName} ${item.classroom}`}
-                      onClick={() => setSelected(item)}
-                    >
-                      <div className="font-semibold">{item.courseName}</div>
-                      <div className="mt-1 text-[#344256]">{item.className}</div>
-                      <div className="text-[#667085]">第{item.startSection}-{item.endSection}节 · {item.classroom}</div>
-                      <div className="text-[#667085]">{item.startWeek}-{item.endWeek}周</div>
-                    </button>
-                  ))}
+                  {(byDay.get(dayIndex + 1) ?? []).map((item) => {
+                    const tone = scheduleTone(item)
+                    return (
+                      <button
+                        key={item.id}
+                        className="absolute left-1 right-1 overflow-hidden rounded-md border px-2 py-2 text-left text-xs leading-5 text-[#172235] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                        style={{
+                          top: `${(item.startSection - 1) * 4 + 0.25}rem`,
+                          height: `${(item.endSection - item.startSection + 1) * 4 - 0.5}rem`,
+                          background: tone.bg,
+                          borderColor: tone.border,
+                        }}
+                        title={`${item.courseName} ${item.classroom}`}
+                        onClick={() => setSelected(item)}
+                      >
+                        <div className="font-semibold" style={{ color: tone.text }}>{item.courseName}</div>
+                        <div className="mt-1 text-[#344256]">{item.className}</div>
+                        <div className="text-[#667085]">第{item.startSection}-{item.endSection}节 · {item.classroom}</div>
+                        <div className="text-[#667085]">{item.startWeek}-{item.endWeek}周</div>
+                      </button>
+                    )
+                  })}
                 </div>
               ))}
             </div>
@@ -164,3 +177,12 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 const inputClass = 'h-10 w-full rounded-md border border-[#cfd8d2] bg-white px-3 text-sm text-[#172235] outline-none transition focus:border-[var(--campus-green)] focus:ring-2 focus:ring-emerald-100'
+
+function scheduleTone(item: ScheduleItem) {
+  const key = `${item.teachingClassId}-${item.courseName}`
+  let hash = 0
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) >>> 0
+  }
+  return palette[hash % palette.length]
+}

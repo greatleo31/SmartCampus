@@ -26,7 +26,7 @@ export function ReadOnlyPage({ title, endpoint, semesterFilter = false }: ReadOn
     ...(keyword.trim() ? { keyword: keyword.trim() } : {}),
     ...(semesterFilter && year ? { academicYear: year, term } : {}),
   }), [page, size, keyword, semesterFilter, year, term])
-  const { data } = useQuery({ queryKey: ['readonly', endpoint, queryParams], queryFn: () => campusApi.readOnly(endpoint, queryParams) })
+  const { data, isFetching } = useQuery({ queryKey: ['readonly', endpoint, queryParams], queryFn: () => campusApi.readOnly(endpoint, queryParams) })
   const pageData = typeof data === 'object' && data && 'records' in data
     ? data as { total: number; page: number; size: number; records: unknown[] }
     : { total: Array.isArray(data) ? data.length : 0, page, size, records: Array.isArray(data) ? data : [] }
@@ -37,6 +37,8 @@ export function ReadOnlyPage({ title, endpoint, semesterFilter = false }: ReadOn
     : [{ key: 'empty', title: '数据' }]
   const yearOptions = Array.from(new Set(options.map((item) => item.academicYear)))
   const termOptions = Array.from(new Set(options.filter((item) => item.academicYear === year).map((item) => item.term)))
+  const isMakeupExams = endpoint === '/api/makeup-exams'
+  const showMakeupClosed = isMakeupExams && !isFetching && pageData.total === 0
 
   return (
     <div className="space-y-5">
@@ -86,8 +88,17 @@ export function ReadOnlyPage({ title, endpoint, semesterFilter = false }: ReadOn
             </Button>
           </div>
         </div>
-        <DataTable rows={rows as Record<string, unknown>[]} columns={columns} />
-        <PaginationBar total={pageData.total} page={pageData.page} size={pageData.size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
+        {showMakeupClosed ? (
+          <div className="rounded-lg border border-dashed border-[#cfd8d2] bg-[#f8faf7] px-5 py-12 text-center">
+            <div className="text-lg font-semibold text-[#172235]">补考未开放</div>
+            <div className="mt-2 text-sm text-[#667085]">补考报名以最终成绩发布后为准。</div>
+          </div>
+        ) : (
+          <>
+            <DataTable rows={rows as Record<string, unknown>[]} columns={columns} />
+            <PaginationBar total={pageData.total} page={pageData.page} size={pageData.size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
+          </>
+        )}
       </Card>
     </div>
   )

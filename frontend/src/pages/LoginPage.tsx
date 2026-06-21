@@ -32,7 +32,7 @@ export function LoginPage() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center text-white"
+      className="flex min-h-screen flex-col bg-cover bg-center text-white"
       style={{ backgroundImage: `linear-gradient(90deg, rgba(5, 45, 33, 0.88) 0%, rgba(5, 45, 33, 0.7) 46%, rgba(5, 45, 33, 0.36) 100%), url(${campusAuthBg})` }}
     >
       <header className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
@@ -43,7 +43,7 @@ export function LoginPage() {
         <div className="hidden shrink-0 text-sm text-emerald-50/90 sm:block">厚德 / 博学 / 求实 / 创新</div>
       </header>
 
-      <main className="mx-auto flex min-h-[calc(100vh-88px)] max-w-7xl items-center justify-end px-5 pb-10 sm:px-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 items-center justify-end px-5 pb-10 sm:px-8">
         <div className="w-full max-w-[420px] rounded-lg border border-white/30 bg-white/88 p-6 text-[#172235] shadow-2xl backdrop-blur-md sm:p-8">
           <div className="mb-7">
             <div className="text-sm font-medium text-[var(--campus-green)]">账号密码登录</div>
@@ -67,6 +67,9 @@ export function LoginPage() {
           </div>
         </div>
       </main>
+      <footer className="px-5 pb-4 text-center text-xs font-medium text-white/78">
+        Copyright © 2024 SmartCampus All rights reserved
+      </footer>
     </div>
   )
 }

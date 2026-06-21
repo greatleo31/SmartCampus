@@ -5,6 +5,8 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '../../api/auth'
 import { useAuth } from '../../hooks/useAuth'
 import { cn } from '../../lib/utils'
+import { AppCopyrightBar } from './AppCopyrightBar'
+import { GlobalRequestLoader } from './GlobalRequestLoader'
 import { SessionTabs } from './SessionTabs'
 
 const adminMenus: { name: string; path: string; icon: LucideIcon }[] = [
@@ -76,7 +78,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           })}
         </nav>
       </aside>
-      <main className="min-w-0 flex-1">
+      <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="relative z-[80] flex min-h-16 items-center justify-between border-b border-[#d9dfd8] bg-white px-4 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-md border border-[#d9dfd8] bg-white p-2 lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={18} /></button>
@@ -92,7 +94,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <SessionTabs menus={[...menus, ...sessionMenus]} titleMap={titleMap} homePath="/admin" />
-        <div className="p-4 lg:p-6">{children}</div>
+        <div className="relative flex-1 p-4 lg:p-6">
+          {children}
+          <GlobalRequestLoader disabled={location.pathname === '/admin'} />
+        </div>
+        <AppCopyrightBar />
       </main>
     </div>
   )

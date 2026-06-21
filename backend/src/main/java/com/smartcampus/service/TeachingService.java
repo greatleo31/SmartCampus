@@ -48,9 +48,16 @@ public class TeachingService {
     private final MajorMapper majorMapper;
     private final AdminClassMapper adminClassMapper;
     private final ClassScheduleMapper classScheduleMapper;
+    private final LocalCacheService localCacheService;
 
     public PageResult<TeachingClassVO> teachingClasses(PageRequest request) {
         CurrentUser user = SecurityUtils.currentUser();
+        return localCacheService.normalTtl(
+                localCacheService.key("teaching:classes", user.id(), user.userType(), user.roles(), request),
+                () -> loadTeachingClasses(request, user));
+    }
+
+    private PageResult<TeachingClassVO> loadTeachingClasses(PageRequest request, CurrentUser user) {
         LambdaQueryWrapper<TeachingClass> wrapper = new LambdaQueryWrapper<TeachingClass>()
                 .and(StringUtils.hasText(request.keyword()), w -> w
                         .like(TeachingClass::getClassName, request.keyword())
@@ -75,21 +82,23 @@ public class TeachingService {
     }
 
     public List<TeacherProfileVO> teachers() {
-        return teacherProfileMapper.selectList(new LambdaQueryWrapper<TeacherProfile>()
-                        .orderByAsc(TeacherProfile::getTeacherNo))
-                .stream()
-                .map(this::toTeacherProfileVO)
-                .toList();
+        return localCacheService.longTtl(localCacheService.key("teaching:teachers"), () ->
+                teacherProfileMapper.selectList(new LambdaQueryWrapper<TeacherProfile>()
+                                .orderByAsc(TeacherProfile::getTeacherNo))
+                        .stream()
+                        .map(this::toTeacherProfileVO)
+                        .toList());
     }
 
     public List<StudentProfileVO> students() {
-        return studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
-                        .orderByAsc(StudentProfile::getGradeYear)
-                        .orderByAsc(StudentProfile::getClassName)
-                        .orderByAsc(StudentProfile::getStudentNo))
-                .stream()
-                .map(this::toStudentProfileVO)
-                .toList();
+        return localCacheService.longTtl(localCacheService.key("teaching:students"), () ->
+                studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
+                                .orderByAsc(StudentProfile::getGradeYear)
+                                .orderByAsc(StudentProfile::getClassName)
+                                .orderByAsc(StudentProfile::getStudentNo))
+                        .stream()
+                        .map(this::toStudentProfileVO)
+                        .toList());
     }
 
     public TeachingClass saveTeachingClass(Long id, TeachingClassRequest request) {
@@ -110,12 +119,14 @@ public class TeachingService {
         } else {
             teachingClassMapper.updateById(teachingClass);
         }
+        invalidateTeachingCaches();
         return teachingClass;
     }
 
     public void deleteTeachingClass(Long id) {
         accessService.requireTeachingClass(id);
         teachingClassMapper.deleteById(id);
+        invalidateTeachingCaches();
     }
 
     @Transactional
@@ -134,6 +145,7 @@ public class TeachingService {
         enrollment.setTeachingClassId(request.teachingClassId());
         enrollment.setStudentId(request.studentId());
         enrollmentMapper.insert(enrollment);
+        invalidateTeachingCaches();
         return enrollment;
     }
 
@@ -156,6 +168,7 @@ public class TeachingService {
         }
         accessService.assertClassScope(enrollment.getTeachingClassId());
         enrollmentMapper.deleteById(id);
+        invalidateTeachingCaches();
     }
 
     @Transactional
@@ -177,6 +190,7 @@ public class TeachingService {
         } else {
             gradeMapper.updateById(record);
         }
+        invalidateTeachingCaches();
         return record;
     }
 
@@ -190,16 +204,21 @@ public class TeachingService {
     }
 
     public PageResult<GradeRecordVO> gradeViews(PageRequest request, Long teachingClassId, Long studentId) {
-        List<GradeRecordVO> rows = grades(teachingClassId, studentId).stream()
-                .map(this::toGradeVO)
-                .filter(item -> matchesSemester(item.semesterName(), request))
-                .filter(item -> !StringUtils.hasText(request.keyword()) || containsAny(request.keyword(), item.courseName(), item.teachingClassName(), item.studentName(), item.studentNo(), item.semesterName()))
-                .sorted(Comparator
-                        .comparing(GradeRecordVO::studentNo, Comparator.nullsLast(String::compareTo))
-                        .thenComparing(GradeRecordVO::semesterName, Comparator.nullsLast(String::compareTo))
-                        .thenComparing(GradeRecordVO::courseName, Comparator.nullsLast(String::compareTo)))
-                .toList();
-        return paginate(rows, request);
+        CurrentUser user = SecurityUtils.currentUser();
+        return localCacheService.normalTtl(
+                localCacheService.key("teaching:grades", user.id(), user.userType(), user.roles(), request, teachingClassId, studentId),
+                () -> {
+                    List<GradeRecordVO> rows = grades(teachingClassId, studentId).stream()
+                            .map(this::toGradeVO)
+                            .filter(item -> matchesSemester(item.semesterName(), request))
+                            .filter(item -> !StringUtils.hasText(request.keyword()) || containsAny(request.keyword(), item.courseName(), item.teachingClassName(), item.studentName(), item.studentNo(), item.semesterName()))
+                            .sorted(Comparator
+                                    .comparing(GradeRecordVO::studentNo, Comparator.nullsLast(String::compareTo))
+                                    .thenComparing(GradeRecordVO::semesterName, Comparator.nullsLast(String::compareTo))
+                                    .thenComparing(GradeRecordVO::courseName, Comparator.nullsLast(String::compareTo)))
+                            .toList();
+                    return paginate(rows, request);
+                });
     }
 
     public void deleteGrade(Long id) {
@@ -209,6 +228,7 @@ public class TeachingService {
         }
         accessService.assertClassScope(record.getTeachingClassId());
         gradeMapper.deleteById(id);
+        invalidateTeachingCaches();
     }
 
     public void deleteGrades(List<Long> ids) {
@@ -236,6 +256,7 @@ public class TeachingService {
         } else {
             attendanceMapper.updateById(record);
         }
+        invalidateTeachingCaches();
         return record;
     }
 
@@ -249,10 +270,32 @@ public class TeachingService {
     }
 
     public PageResult<AttendanceRecordVO> attendanceViews(PageRequest request, Long teachingClassId, Long studentId) {
+        CurrentUser user = SecurityUtils.currentUser();
+        return localCacheService.normalTtl(
+                localCacheService.key("teaching:attendance", user.id(), user.userType(), user.roles(), request, teachingClassId, studentId),
+                () -> loadAttendanceViews(request, teachingClassId, studentId));
+    }
+
+    private PageResult<AttendanceRecordVO> loadAttendanceViews(PageRequest request, Long teachingClassId, Long studentId) {
+        if (StringUtils.hasText(request.keyword())) {
+            return loadAttendanceViewsWithKeyword(request, teachingClassId, studentId);
+        }
+        LambdaQueryWrapper<AttendanceRecord> wrapper = new LambdaQueryWrapper<AttendanceRecord>()
+                .eq(teachingClassId != null, AttendanceRecord::getTeachingClassId, teachingClassId)
+                .eq(studentId != null, AttendanceRecord::getStudentId, studentId)
+                .orderByDesc(AttendanceRecord::getAttendanceDate)
+                .orderByDesc(AttendanceRecord::getId);
+        applyAttendanceScope(wrapper);
+        applyAttendanceSemesterFilter(wrapper, request);
+        Page<AttendanceRecord> page = attendanceMapper.selectPage(new Page<>(request.page(), request.size()), wrapper);
+        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords().stream().map(this::toAttendanceVO).toList());
+    }
+
+    private PageResult<AttendanceRecordVO> loadAttendanceViewsWithKeyword(PageRequest request, Long teachingClassId, Long studentId) {
         List<AttendanceRecordVO> rows = attendance(teachingClassId, studentId).stream()
                 .map(this::toAttendanceVO)
                 .filter(item -> matchesSemester(item.semesterName(), request))
-                .filter(item -> !StringUtils.hasText(request.keyword()) || containsAny(request.keyword(), item.adminClassName(), item.studentNo(), item.studentName(), item.courseName(), item.teachingClassName(), item.teacherName(), item.classroom()))
+                .filter(item -> containsAny(request.keyword(), item.adminClassName(), item.studentNo(), item.studentName(), item.courseName(), item.teachingClassName(), item.teacherName(), item.classroom()))
                 .sorted(Comparator
                         .comparing(AttendanceRecordVO::adminClassName, Comparator.nullsLast(String::compareTo))
                         .thenComparing(AttendanceRecordVO::studentNo, Comparator.nullsLast(String::compareTo))
@@ -269,6 +312,7 @@ public class TeachingService {
         }
         accessService.assertClassScope(record.getTeachingClassId());
         attendanceMapper.deleteById(id);
+        invalidateTeachingCaches();
     }
 
     public void deleteAttendanceBatch(List<Long> ids) {
@@ -315,6 +359,7 @@ public class TeachingService {
                 generated++;
             }
         }
+        invalidateTeachingCaches();
         return generated;
     }
 
@@ -352,6 +397,12 @@ public class TeachingService {
 
     public DashboardVO dashboard() {
         CurrentUser user = SecurityUtils.currentUser();
+        return localCacheService.shortTtl(
+                localCacheService.key("dashboard:overview", user.id(), user.userType(), user.roles()),
+                () -> loadDashboard(user));
+    }
+
+    private DashboardVO loadDashboard(CurrentUser user) {
         LambdaQueryWrapper<TeachingClass> classWrapper = new LambdaQueryWrapper<>();
         LambdaQueryWrapper<AcademicWarning> warningWrapper = new LambdaQueryWrapper<>();
         LambdaQueryWrapper<AttendanceRecord> attendanceWrapper = new LambdaQueryWrapper<AttendanceRecord>()
@@ -409,6 +460,15 @@ public class TeachingService {
                 recent,
                 dashboardTrends(user)
         );
+    }
+
+    private void invalidateDashboardCache() {
+        localCacheService.invalidatePrefix("dashboard:overview");
+    }
+
+    private void invalidateTeachingCaches() {
+        localCacheService.invalidatePrefix("teaching");
+        invalidateDashboardCache();
     }
 
     private long scopedStudentCount(CurrentUser user) {
@@ -539,6 +599,32 @@ public class TeachingService {
         } else if (user.isStudent()) {
             wrapper.eq(AttendanceRecord::getStudentId, accessService.currentStudentId());
         }
+    }
+
+    private void applyAttendanceSemesterFilter(LambdaQueryWrapper<AttendanceRecord> wrapper, PageRequest request) {
+        if (!StringUtils.hasText(request.academicYear()) || request.term() == null) {
+            return;
+        }
+        String semesterName = request.academicYear() + "-" + request.term();
+        List<Long> semesterIds = semesterMapper.selectList(new LambdaQueryWrapper<Semester>()
+                        .eq(Semester::getName, semesterName))
+                .stream()
+                .map(Semester::getId)
+                .toList();
+        if (semesterIds.isEmpty()) {
+            wrapper.eq(AttendanceRecord::getTeachingClassId, -1L);
+            return;
+        }
+        List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
+                        .in(TeachingClass::getSemesterId, semesterIds))
+                .stream()
+                .map(TeachingClass::getId)
+                .toList();
+        if (classIds.isEmpty()) {
+            wrapper.eq(AttendanceRecord::getTeachingClassId, -1L);
+            return;
+        }
+        wrapper.in(AttendanceRecord::getTeachingClassId, classIds);
     }
 
     private void applyWarningScope(LambdaQueryWrapper<AcademicWarning> wrapper) {

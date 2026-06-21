@@ -28,14 +28,17 @@ public class CatalogService {
     private final CollegeMapper collegeMapper;
     private final MajorMapper majorMapper;
     private final AdminClassMapper adminClassMapper;
+    private final LocalCacheService localCacheService;
 
     public PageResult<Semester> semesters(PageRequest request) {
-        Page<Semester> page = semesterMapper.selectPage(new Page<>(request.page(), request.size()),
-                new LambdaQueryWrapper<Semester>()
-                        .like(StringUtils.hasText(request.keyword()), Semester::getName, request.keyword())
-                        .orderByDesc(Semester::getCurrentFlag)
-                        .orderByDesc(Semester::getStartDate));
-        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords());
+        return localCacheService.normalTtl(localCacheService.key("catalog:semesters", request), () -> {
+            Page<Semester> page = semesterMapper.selectPage(new Page<>(request.page(), request.size()),
+                    new LambdaQueryWrapper<Semester>()
+                            .like(StringUtils.hasText(request.keyword()), Semester::getName, request.keyword())
+                            .orderByDesc(Semester::getCurrentFlag)
+                            .orderByDesc(Semester::getStartDate));
+            return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords());
+        });
     }
 
     @Transactional
@@ -62,12 +65,14 @@ public class CatalogService {
         } else {
             semesterMapper.updateById(semester);
         }
+        invalidateCatalogCaches();
         return semester;
     }
 
     public void deleteSemester(Long id) {
         requireSemester(id);
         semesterMapper.deleteById(id);
+        invalidateCatalogCaches();
     }
 
     public Semester requireSemester(Long id) {
@@ -79,70 +84,75 @@ public class CatalogService {
     }
 
     public PageResult<CourseVO> courses(PageRequest request) {
-        Page<Course> page = courseMapper.selectPage(new Page<>(request.page(), request.size()),
-                new LambdaQueryWrapper<Course>()
-                        .and(StringUtils.hasText(request.keyword()), w -> w
-                                .like(Course::getName, request.keyword())
-                                .or()
-                                .like(Course::getAliasName, request.keyword())
-                                .or()
-                                .like(Course::getCode, request.keyword()))
-                        .orderByDesc(Course::getId));
-        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(),
-                page.getRecords().stream().map(this::toCourseVO).toList());
+        return localCacheService.normalTtl(localCacheService.key("catalog:courses", request), () -> {
+            Page<Course> page = courseMapper.selectPage(new Page<>(request.page(), request.size()),
+                    new LambdaQueryWrapper<Course>()
+                            .and(StringUtils.hasText(request.keyword()), w -> w
+                                    .like(Course::getName, request.keyword())
+                                    .or()
+                                    .like(Course::getAliasName, request.keyword())
+                                    .or()
+                                    .like(Course::getCode, request.keyword()))
+                            .orderByDesc(Course::getId));
+            return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(),
+                    page.getRecords().stream().map(this::toCourseVO).toList());
+        });
     }
 
     public List<CollegeVO> colleges() {
-        return collegeMapper.selectList(new LambdaQueryWrapper<College>()
-                        .orderByAsc(College::getDisplayOrder)
-                        .orderByAsc(College::getId))
-                .stream()
-                .map(college -> new CollegeVO(
-                        college.getId(),
-                        college.getCode(),
-                        college.getName(),
-                        college.getShortName(),
-                        college.getTeacherCode(),
-                        college.getFoundedYear()))
-                .toList();
+        return localCacheService.longTtl(localCacheService.key("catalog:colleges"), () ->
+                collegeMapper.selectList(new LambdaQueryWrapper<College>()
+                                .orderByAsc(College::getDisplayOrder)
+                                .orderByAsc(College::getId))
+                        .stream()
+                        .map(college -> new CollegeVO(
+                                college.getId(),
+                                college.getCode(),
+                                college.getName(),
+                                college.getShortName(),
+                                college.getTeacherCode(),
+                                college.getFoundedYear()))
+                        .toList());
     }
 
     public List<MajorVO> majors(Long collegeId) {
-        return majorMapper.selectList(new LambdaQueryWrapper<Major>()
-                        .eq(collegeId != null, Major::getCollegeId, collegeId)
-                        .orderByAsc(Major::getCode))
-                .stream()
-                .map(major -> {
-                    College college = collegeMapper.selectById(major.getCollegeId());
-                    return new MajorVO(
-                            major.getId(),
-                            major.getCollegeId(),
-                            college == null ? "-" : college.getName(),
-                            major.getCode(),
-                            major.getName());
-                })
-                .toList();
+        return localCacheService.longTtl(localCacheService.key("catalog:majors", collegeId), () ->
+                majorMapper.selectList(new LambdaQueryWrapper<Major>()
+                                .eq(collegeId != null, Major::getCollegeId, collegeId)
+                                .orderByAsc(Major::getCode))
+                        .stream()
+                        .map(major -> {
+                            College college = collegeMapper.selectById(major.getCollegeId());
+                            return new MajorVO(
+                                    major.getId(),
+                                    major.getCollegeId(),
+                                    college == null ? "-" : college.getName(),
+                                    major.getCode(),
+                                    major.getName());
+                        })
+                        .toList());
     }
 
     public List<AdminClassVO> adminClasses(Long majorId) {
-        return adminClassMapper.selectList(new LambdaQueryWrapper<AdminClass>()
-                        .eq(majorId != null, AdminClass::getMajorId, majorId)
-                        .orderByAsc(AdminClass::getGradeYear)
-                        .orderByAsc(AdminClass::getClassName))
-                .stream()
-                .map(adminClass -> {
-                    Major major = majorMapper.selectById(adminClass.getMajorId());
-                    College college = major == null ? null : collegeMapper.selectById(major.getCollegeId());
-                    return new AdminClassVO(
-                            adminClass.getId(),
-                            adminClass.getMajorId(),
-                            college == null ? "-" : college.getName(),
-                            major == null ? "-" : major.getName(),
-                            adminClass.getClassName(),
-                            adminClass.getGradeYear(),
-                            adminClass.getClassNo());
-                })
-                .toList();
+        return localCacheService.longTtl(localCacheService.key("catalog:admin-classes", majorId), () ->
+                adminClassMapper.selectList(new LambdaQueryWrapper<AdminClass>()
+                                .eq(majorId != null, AdminClass::getMajorId, majorId)
+                                .orderByAsc(AdminClass::getGradeYear)
+                                .orderByAsc(AdminClass::getClassName))
+                        .stream()
+                        .map(adminClass -> {
+                            Major major = majorMapper.selectById(adminClass.getMajorId());
+                            College college = major == null ? null : collegeMapper.selectById(major.getCollegeId());
+                            return new AdminClassVO(
+                                    adminClass.getId(),
+                                    adminClass.getMajorId(),
+                                    college == null ? "-" : college.getName(),
+                                    major == null ? "-" : major.getName(),
+                                    adminClass.getClassName(),
+                                    adminClass.getGradeYear(),
+                                    adminClass.getClassNo());
+                        })
+                        .toList());
     }
 
     public Course saveCourse(Long id, CourseRequest request) {
@@ -158,12 +168,14 @@ public class CatalogService {
         } else {
             courseMapper.updateById(course);
         }
+        invalidateCatalogCaches();
         return course;
     }
 
     public void deleteCourse(Long id) {
         requireCourse(id);
         courseMapper.deleteById(id);
+        invalidateCatalogCaches();
     }
 
     public Course requireCourse(Long id) {
@@ -185,5 +197,10 @@ public class CatalogService {
                 college == null ? "-" : college.getName(),
                 course.getCredit(),
                 course.getHours());
+    }
+
+    private void invalidateCatalogCaches() {
+        localCacheService.invalidatePrefix("catalog");
+        localCacheService.invalidatePrefix("dashboard:overview");
     }
 }

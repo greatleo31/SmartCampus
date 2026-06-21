@@ -19,14 +19,14 @@ import java.time.format.DateTimeFormatter;
 public class WeatherService {
     private static final String GUANGZHOU_URL = "https://api.open-meteo.com/v1/forecast?latitude=23.1291&longitude=113.2644&current=temperature_2m,precipitation,rain,showers,weather_code,wind_speed_10m&timezone=Asia%2FShanghai";
     private final ObjectMapper objectMapper;
+    private final LocalCacheService localCacheService;
     private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(4)).build();
-    private WeatherVO cached;
-    private LocalDateTime cachedAt;
 
-    public synchronized WeatherVO guangzhou() {
-        if (cached != null && cachedAt != null && cachedAt.plusMinutes(10).isAfter(LocalDateTime.now())) {
-            return cached;
-        }
+    public WeatherVO guangzhou() {
+        return localCacheService.normalTtl(localCacheService.key("weather:guangzhou"), this::loadGuangzhou);
+    }
+
+    private WeatherVO loadGuangzhou() {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(GUANGZHOU_URL))
                     .timeout(Duration.ofSeconds(6))
@@ -43,13 +43,8 @@ public class WeatherService {
                     LocalDateTime.parse(current.path("time").asText(), DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                     false
             );
-            cached = next;
-            cachedAt = LocalDateTime.now();
             return next;
         } catch (Exception ex) {
-            if (cached != null) {
-                return new WeatherVO(cached.city(), cached.weather(), cached.temperature(), cached.precipitation(), cached.windSpeed(), cached.observedAt(), true);
-            }
             return new WeatherVO("广州", "天气暂不可用", null, null, null, LocalDateTime.now(), true);
         }
     }

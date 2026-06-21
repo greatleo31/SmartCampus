@@ -21,6 +21,8 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '../../api/auth'
 import { useAuth } from '../../hooks/useAuth'
 import { cn } from '../../lib/utils'
+import { AppCopyrightBar } from './AppCopyrightBar'
+import { GlobalRequestLoader } from './GlobalRequestLoader'
 import { SessionTabs } from './SessionTabs'
 
 const roleLabels = {
@@ -80,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       return [{ name: normalizedMenuName('/', '主页', user?.userType), path: '/', permission: 'dashboard:view' }, ...base]
     }
     return base
-  }, [menus])
+  }, [menus, user?.userType])
   const currentTitle = titleFor(location.pathname, visibleMenus)
 
   function logout() {
@@ -147,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </nav>
       </aside>
-      <main className="min-w-0 flex-1">
+      <main className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="relative z-[80] flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-[#d9dfd8] bg-white/95 px-4 py-3 backdrop-blur lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button className="rounded-md border border-[#d9dfd8] bg-white p-2 lg:hidden" onClick={() => setMobileOpen(true)} aria-label="打开菜单">
@@ -180,7 +182,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <SessionTabs menus={[...visibleMenus, { name: '个人主页', path: '/profile', permission: 'profile' }]} titleMap={titleMap} />
-        <div className="p-4 lg:p-6">{children}</div>
+        <div className="relative flex-1 p-4 lg:p-6">
+          {children}
+          <GlobalRequestLoader disabled={location.pathname === '/'} />
+        </div>
+        <AppCopyrightBar />
       </main>
     </div>
   )

@@ -1,4 +1,4 @@
-import { deleteData, downloadBlob, getData, postData, postFormData, putData } from './client'
+import { deleteData, downloadBlob, getData, postData, postFormData, putData, type DownloadProgressHandler } from './client'
 import type {
   AcademicWarning,
   AdminUser,
@@ -56,8 +56,8 @@ export const campusApi = {
   saveGrade: (body: Omit<GradeRecord, 'id' | 'totalScore'>) => postData<GradeRecord>('/api/grades', body),
   deleteGrade: (id: number) => deleteData<void>(`/api/grades/${id}`),
   deleteGrades: (ids: number[]) => postData<void>('/api/grades/batch-delete', ids),
-  gradeTemplate: () => downloadBlob('/api/grades/template-xlsx'),
-  exportGrades: () => downloadBlob('/api/grades/export-xlsx'),
+  gradeTemplate: (onProgress?: DownloadProgressHandler) => downloadBlob('/api/grades/template-xlsx', onProgress),
+  exportGrades: (onProgress?: DownloadProgressHandler) => downloadBlob('/api/grades/export-xlsx', onProgress),
   importGrades: (file: File) => {
     const body = new FormData()
     body.append('file', file)
@@ -67,8 +67,8 @@ export const campusApi = {
   saveAttendance: (body: Omit<AttendanceRecord, 'id'>) => postData<AttendanceRecord>('/api/attendance', body),
   deleteAttendance: (id: number) => deleteData<void>(`/api/attendance/${id}`),
   deleteAttendanceBatch: (ids: number[]) => postData<void>('/api/attendance/batch-delete', ids),
-  attendanceTemplate: () => downloadBlob('/api/attendance/template-xlsx'),
-  exportAttendance: () => downloadBlob('/api/attendance/export-xlsx'),
+  attendanceTemplate: (onProgress?: DownloadProgressHandler) => downloadBlob('/api/attendance/template-xlsx', onProgress),
+  exportAttendance: (onProgress?: DownloadProgressHandler) => downloadBlob('/api/attendance/export-xlsx', onProgress),
   importAttendance: (file: File) => {
     const body = new FormData()
     body.append('file', file)
