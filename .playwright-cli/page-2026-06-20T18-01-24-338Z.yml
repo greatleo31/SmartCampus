@@ -1,0 +1,159 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e12]:
+        - generic [ref=e13]: 智慧校园
+        - generic [ref=e14]: 教务服务门户
+    - button "收起导航" [ref=e16]:
+      - img [ref=e17]
+      - generic [ref=e18]: 收起导航
+    - navigation [ref=e19]:
+      - generic [ref=e20]: 常用功能
+      - generic [ref=e21]:
+        - link "主页" [ref=e22] [cursor=pointer]:
+          - /url: /
+          - img [ref=e23]
+          - generic [ref=e26]: 主页
+        - link "校历" [ref=e110] [cursor=pointer]:
+          - /url: /calendar
+          - img [ref=e111]
+          - generic [ref=e113]: 校历
+        - link "班级课表" [ref=e114] [cursor=pointer]:
+          - /url: /class-schedule
+          - img [ref=e115]
+          - generic [ref=e117]: 班级课表
+        - link "个人课表" [ref=e118] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e119]
+          - generic [ref=e121]: 个人课表
+        - link "我的选课" [ref=e122] [cursor=pointer]:
+          - /url: /my/courses
+          - img [ref=e123]
+          - generic [ref=e125]: 我的选课
+        - link "考试" [ref=e126] [cursor=pointer]:
+          - /url: /exams
+          - img [ref=e127]
+          - generic [ref=e131]: 考试
+        - link "成绩查询" [ref=e132] [cursor=pointer]:
+          - /url: /my/grades
+          - img [ref=e133]
+          - generic [ref=e136]: 成绩查询
+        - link "绩点查询" [ref=e137] [cursor=pointer]:
+          - /url: /gpa-ranking
+          - img [ref=e138]
+          - generic [ref=e141]: 绩点查询
+        - link "补考" [ref=e142] [cursor=pointer]:
+          - /url: /makeup-exams
+          - img [ref=e143]
+          - generic [ref=e147]: 补考
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "个人课表" [level=1] [ref=e31]
+      - button "陈明轩 学生" [ref=e33]:
+        - img [ref=e35]
+        - generic [ref=e38]:
+          - generic [ref=e39]: 陈明轩
+          - generic [ref=e40]: 学生
+    - generic [ref=e42]:
+      - button "主页" [ref=e43]:
+        - generic [ref=e44]: 主页
+        - img [ref=e46]
+      - button "班级课表" [ref=e49]:
+        - generic [ref=e50]: 班级课表
+        - img [ref=e52]
+      - button "个人课表" [ref=e55]:
+        - generic [ref=e56]: 个人课表
+        - img [ref=e58]
+      - button "我的选课" [ref=e61]:
+        - generic [ref=e62]: 我的选课
+        - img [ref=e64]
+    - generic [ref=e68]:
+      - heading "个人课表" [level=1] [ref=e70]
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]: 学年
+            - combobox "学年" [ref=e75]:
+              - option "全部学年" [selected]
+              - option "2026-2027"
+              - option "2025-2026"
+          - generic [ref=e76]:
+            - generic [ref=e77]: 学期
+            - combobox "学期" [ref=e78]:
+              - option "1"
+              - option "2" [selected]
+          - generic [ref=e79]:
+            - button "列表" [ref=e80]:
+              - img [ref=e81]
+              - text: 列表
+            - button "周视图" [ref=e82]:
+              - img [ref=e83]
+              - text: 周视图
+        - table [ref=e89]:
+          - rowgroup [ref=e90]:
+            - row "学期 课程 教学班 任课教师 星期 周次 节次 教室 详情" [ref=e91]:
+              - columnheader "学期" [ref=e92]
+              - columnheader "课程" [ref=e93]
+              - columnheader "教学班" [ref=e94]
+              - columnheader "任课教师" [ref=e95]
+              - columnheader "星期" [ref=e96]
+              - columnheader "周次" [ref=e97]
+              - columnheader "节次" [ref=e98]
+              - columnheader "教室" [ref=e99]
+              - columnheader "详情" [ref=e100]
+          - rowgroup [ref=e101]:
+            - row "2025-2026-2 动物解剖学 动物解剖学-24动物医学1班 李明 周一 第 1-16 周 第 1-2 节 教1-201 查看" [ref=e148]:
+              - cell "2025-2026-2" [ref=e149]
+              - cell "动物解剖学" [ref=e150]
+              - cell "动物解剖学-24动物医学1班" [ref=e151]
+              - cell "李明" [ref=e152]
+              - cell "周一" [ref=e153]
+              - cell "第 1-16 周" [ref=e154]
+              - cell "第 1-2 节" [ref=e155]
+              - cell "教1-201" [ref=e156]
+              - cell "查看" [ref=e157]:
+                - button "查看" [ref=e158]
+            - row "2025-2026-2 兽医微生物学 兽医微生物学-24动物医学1班 王芳 周二 第 1-16 周 第 3-4 节 教1-202 查看" [ref=e159]:
+              - cell "2025-2026-2" [ref=e160]
+              - cell "兽医微生物学" [ref=e161]
+              - cell "兽医微生物学-24动物医学1班" [ref=e162]
+              - cell "王芳" [ref=e163]
+              - cell "周二" [ref=e164]
+              - cell "第 1-16 周" [ref=e165]
+              - cell "第 3-4 节" [ref=e166]
+              - cell "教1-202" [ref=e167]
+              - cell "查看" [ref=e168]:
+                - button "查看" [ref=e169]
+            - row "2025-2026-2 动物解剖学 动物解剖学-24动物医学1班 李明 周三 第 1-16 周 第 3-5 节 实训楼-301 查看" [ref=e170]:
+              - cell "2025-2026-2" [ref=e171]
+              - cell "动物解剖学" [ref=e172]
+              - cell "动物解剖学-24动物医学1班" [ref=e173]
+              - cell "李明" [ref=e174]
+              - cell "周三" [ref=e175]
+              - cell "第 1-16 周" [ref=e176]
+              - cell "第 3-5 节" [ref=e177]
+              - cell "实训楼-301" [ref=e178]
+              - cell "查看" [ref=e179]:
+                - button "查看" [ref=e180]
+            - row "2025-2026-2 兽医微生物学 兽医微生物学-24动物医学1班 王芳 周四 第 1-16 周 第 5-7 节 实训楼-302 查看" [ref=e181]:
+              - cell "2025-2026-2" [ref=e182]
+              - cell "兽医微生物学" [ref=e183]
+              - cell "兽医微生物学-24动物医学1班" [ref=e184]
+              - cell "王芳" [ref=e185]
+              - cell "周四" [ref=e186]
+              - cell "第 1-16 周" [ref=e187]
+              - cell "第 5-7 节" [ref=e188]
+              - cell "实训楼-302" [ref=e189]
+              - cell "查看" [ref=e190]:
+                - button "查看" [ref=e191]
+        - generic [ref=e104]:
+          - generic [ref=e105]: 共 4 条，第 1 / 1 页
+          - generic [ref=e106]:
+            - combobox [ref=e107]:
+              - option "10 / 页" [selected]
+              - option "20 / 页"
+              - option "50 / 页"
+              - option "100 / 页"
+            - button "上一页" [disabled] [ref=e108]
+            - button "下一页" [disabled] [ref=e109]

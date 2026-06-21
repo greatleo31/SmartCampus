@@ -1,0 +1,75 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e12]:
+        - generic [ref=e13]: 智慧校园
+        - generic [ref=e14]: 教务服务门户
+    - button "收起导航" [ref=e16]:
+      - img [ref=e17]
+      - generic [ref=e18]: 收起导航
+    - navigation [ref=e19]:
+      - generic [ref=e20]: 常用功能
+      - link "主页" [ref=e22] [cursor=pointer]:
+        - /url: /
+        - img [ref=e23]
+        - generic [ref=e26]: 主页
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "页面未找到" [level=1] [ref=e31]
+      - button "李明 教师" [ref=e33]:
+        - img [ref=e35]
+        - generic [ref=e38]:
+          - generic [ref=e39]: 李明
+          - generic [ref=e40]: 教师
+    - generic [ref=e42]:
+      - button "主页" [ref=e43]:
+        - generic [ref=e44]: 主页
+        - img [ref=e46]
+      - button "页面" [ref=e49]:
+        - generic [ref=e50]: 页面
+        - img [ref=e52]
+    - generic [ref=e56]:
+      - heading "考勤管理" [level=1] [ref=e58]
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: 教学班
+            - combobox "教学班" [ref=e63]:
+              - option "全部教学班" [selected]
+          - generic [ref=e64]:
+            - generic [ref=e65]: 学年
+            - combobox "学年" [ref=e66]:
+              - option "全部学年" [selected]
+          - generic [ref=e67]:
+            - generic [ref=e68]: 学期
+            - combobox "学期" [ref=e69]:
+              - option "1"
+              - option "2" [selected]
+        - table [ref=e71]:
+          - rowgroup [ref=e72]:
+            - row "班级 学号 姓名 课程 教学班 日期 周次 任课老师 节次 教室 状态" [ref=e73]:
+              - columnheader "班级" [ref=e74]
+              - columnheader "学号" [ref=e75]
+              - columnheader "姓名" [ref=e76]
+              - columnheader "课程" [ref=e77]
+              - columnheader "教学班" [ref=e78]
+              - columnheader "日期" [ref=e79]
+              - columnheader "周次" [ref=e80]
+              - columnheader "任课老师" [ref=e81]
+              - columnheader "节次" [ref=e82]
+              - columnheader "教室" [ref=e83]
+              - columnheader "状态" [ref=e84]
+          - rowgroup [ref=e85]:
+            - row "暂无数据" [ref=e86]:
+              - cell "暂无数据" [ref=e87]
+        - generic [ref=e88]:
+          - generic [ref=e89]: 共 0 条，第 1 / 1 页
+          - generic [ref=e90]:
+            - combobox [ref=e91]:
+              - option "10 / 页" [selected]
+              - option "20 / 页"
+              - option "50 / 页"
+              - option "100 / 页"
+            - button "上一页" [disabled] [ref=e92]
+            - button "下一页" [disabled] [ref=e93]

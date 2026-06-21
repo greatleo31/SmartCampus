@@ -16,6 +16,8 @@ public class Course extends BaseEntity {
     private Long id;
     private String code;
     private String name;
+    private String aliasName;
+    private Long collegeId;
     private BigDecimal credit;
     private Integer hours;
 }

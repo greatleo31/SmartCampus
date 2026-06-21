@@ -19,6 +19,7 @@ export function ProfilePage() {
   const { user } = useAuth()
   const { data = null } = useQuery({ queryKey: ['profileSecurity'], queryFn: campusApi.profileSecurity })
   const [modal, setModal] = useState<ModalType>(null)
+  const profileRows = buildProfileRows(data, user)
 
   return (
     <div className="space-y-5">
@@ -43,13 +44,7 @@ export function ProfilePage() {
         <Card className="p-5">
           <h2 className="mb-4 text-base font-semibold text-[#172235]">基础信息</h2>
           <dl className="divide-y divide-[#edf0eb] text-sm">
-            {[
-              ['姓名', data?.realName ?? user?.realName ?? '-'],
-              ['用户名', data?.username ?? user?.username ?? '-'],
-              ['身份', data ? roleLabels[data.userType] : user ? roleLabels[user.userType] : '-'],
-              ['校园身份', data?.campusIdentity || '未绑定'],
-              ['最近登录', data?.lastLoginTime?.replace('T', ' ').slice(0, 16) || '暂无记录'],
-            ].map(([label, value]) => (
+            {profileRows.map(([label, value]) => (
               <div key={label} className="grid grid-cols-[88px_1fr] gap-3 py-3">
                 <dt className="text-[#667085]">{label}</dt>
                 <dd className="min-w-0 break-words font-medium text-[#172235]">{value}</dd>
@@ -63,7 +58,7 @@ export function ProfilePage() {
           <div className="space-y-3">
             <SecurityRow icon={<KeyRound size={19} />} title="登录密码" text="建议定期修改，避免与其他系统复用。" action="修改密码" onClick={() => setModal('password')} />
             <SecurityRow icon={<Mail size={19} />} title="绑定邮箱" text={data?.email || '未绑定邮箱'} action={data?.email ? '更新邮箱' : '绑定邮箱'} onClick={() => setModal('email')} />
-            <SecurityRow icon={<ShieldCheck size={19} />} title="微信/校园身份" text={data?.wechatBound ? `已绑定${data.campusIdentity ? ` · ${data.campusIdentity}` : ''}` : '未绑定，当前仅保存业务状态'} action="维护绑定" onClick={() => setModal('wechat')} />
+            <SecurityRow icon={<ShieldCheck size={19} />} title="微信绑定" text={data?.wechatBound ? '已绑定' : '未绑定'} action="维护绑定" onClick={() => setModal('wechat')} />
           </div>
         </Card>
       </div>
@@ -92,7 +87,7 @@ function SecurityModal({ type, close }: { type: ModalType; close: () => void }) 
   const qc = useQueryClient()
   const [password, setPassword] = useState({ oldPassword: '', newPassword: '' })
   const [email, setEmail] = useState('')
-  const [wechat, setWechat] = useState({ bound: true, campusIdentity: '' })
+  const [wechat, setWechat] = useState({ bound: true })
   const [message, setMessage] = useState('')
   const passwordMutation = useMutation({ mutationFn: campusApi.changePassword, onSuccess: () => { setMessage('密码已修改'); setPassword({ oldPassword: '', newPassword: '' }) }, onError: (error) => setMessage(error.message) })
   const emailMutation = useMutation({ mutationFn: campusApi.bindEmail, onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['profileSecurity'] }); close() }, onError: (error) => setMessage(error.message) })
@@ -107,7 +102,7 @@ function SecurityModal({ type, close }: { type: ModalType; close: () => void }) 
   }
 
   return (
-    <Modal open={type !== null} title={type === 'password' ? '修改密码' : type === 'email' ? '绑定邮箱' : '维护微信/校园身份'} onClose={close}>
+    <Modal open={type !== null} title={type === 'password' ? '修改密码' : type === 'email' ? '绑定邮箱' : '维护微信绑定'} onClose={close}>
       <form className="space-y-4" onSubmit={submit}>
         {type === 'password' && (
           <>
@@ -117,10 +112,7 @@ function SecurityModal({ type, close }: { type: ModalType; close: () => void }) 
         )}
         {type === 'email' && <Field label="邮箱"><input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>}
         {type === 'wechat' && (
-          <>
-            <Field label="绑定状态"><select className={inputClass} value={wechat.bound ? 'true' : 'false'} onChange={(e) => setWechat({ ...wechat, bound: e.target.value === 'true' })}><option value="true">已绑定</option><option value="false">未绑定</option></select></Field>
-            <Field label="校园身份"><input className={inputClass} value={wechat.campusIdentity} onChange={(e) => setWechat({ ...wechat, campusIdentity: e.target.value })} placeholder="如：本科生 / 教师 / 管理员" /></Field>
-          </>
+          <Field label="绑定状态"><select className={inputClass} value={wechat.bound ? 'true' : 'false'} onChange={(e) => setWechat({ bound: e.target.value === 'true' })}><option value="true">已绑定</option><option value="false">未绑定</option></select></Field>
         )}
         {message && <div className="rounded-md border border-[#d9dfd8] bg-[#f8faf7] px-3 py-2 text-sm text-[#344256]">{message}</div>}
         <Button type="submit">保存</Button>
@@ -134,3 +126,30 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const inputClass = 'h-10 w-full rounded-md border border-[#cfd8d2] bg-white px-3 text-sm text-[#172235] outline-none transition focus:border-[var(--campus-green)] focus:ring-2 focus:ring-emerald-100'
+
+function buildProfileRows(
+  data: Awaited<ReturnType<typeof campusApi.profileSecurity>> | null,
+  user: ReturnType<typeof useAuth>['user'],
+) {
+  const userType = data?.userType ?? user?.userType
+  const rows: [string, string][] = [
+    ['姓名', data?.realName ?? user?.realName ?? '-'],
+    ['用户名', data?.username ?? user?.username ?? '-'],
+    ['身份', userType ? roleLabels[userType] : '-'],
+  ]
+  if (userType === 'STUDENT') {
+    rows.push(['学院', data?.collegeName || '-'])
+    rows.push(['专业', data?.majorName || '-'])
+    rows.push(['班级', data?.className || '-'])
+    rows.push(['学号', data?.studentNo || '-'])
+  } else if (userType === 'TEACHER') {
+    rows.push(['学院', data?.collegeName || '-'])
+    rows.push(['部门', data?.department || '-'])
+    rows.push(['工号', data?.teacherNo || '-'])
+    rows.push(['职称', data?.title || '-'])
+  } else {
+    rows.push(['部门', data?.department || '教务运行中心'])
+  }
+  rows.push(['最近登录', data?.lastLoginTime?.replace('T', ' ').slice(0, 16) || '暂无记录'])
+  return rows
+}

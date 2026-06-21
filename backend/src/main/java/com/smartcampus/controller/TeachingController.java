@@ -97,9 +97,10 @@ public class TeachingController {
 
     @GetMapping("/api/grades")
     @PreAuthorize("hasAuthority('grade:manage') or hasAuthority('student:grade:view')")
-    public ApiResponse<List<GradeRecordVO>> grades(@RequestParam(required = false) Long teachingClassId,
-                                                   @RequestParam(required = false) Long studentId) {
-        return ApiResponse.ok(teachingService.gradeViews(teachingClassId, studentId));
+    public ApiResponse<PageResult<GradeRecordVO>> grades(@Valid PageRequest request,
+                                                         @RequestParam(required = false) Long teachingClassId,
+                                                         @RequestParam(required = false) Long studentId) {
+        return ApiResponse.ok(teachingService.gradeViews(request, teachingClassId, studentId));
     }
 
     @PostMapping("/api/grades")
@@ -148,9 +149,10 @@ public class TeachingController {
 
     @GetMapping("/api/attendance")
     @PreAuthorize("hasAuthority('attendance:manage') or hasAuthority('student:attendance:view')")
-    public ApiResponse<List<AttendanceRecordVO>> attendance(@RequestParam(required = false) Long teachingClassId,
-                                                            @RequestParam(required = false) Long studentId) {
-        return ApiResponse.ok(teachingService.attendanceViews(teachingClassId, studentId));
+    public ApiResponse<PageResult<AttendanceRecordVO>> attendance(@Valid PageRequest request,
+                                                                  @RequestParam(required = false) Long teachingClassId,
+                                                                  @RequestParam(required = false) Long studentId) {
+        return ApiResponse.ok(teachingService.attendanceViews(request, teachingClassId, studentId));
     }
 
     @PostMapping("/api/attendance")
@@ -217,14 +219,14 @@ public class TeachingController {
 
     @GetMapping("/api/my/grades")
     @PreAuthorize("hasAuthority('student:grade:view')")
-    public ApiResponse<List<GradeRecordVO>> myGrades() {
-        return ApiResponse.ok(teachingService.gradeViews(null, null));
+    public ApiResponse<PageResult<GradeRecordVO>> myGrades(@Valid PageRequest request) {
+        return ApiResponse.ok(teachingService.gradeViews(request, null, null));
     }
 
     @GetMapping("/api/my/attendance")
     @PreAuthorize("hasAuthority('student:attendance:view')")
-    public ApiResponse<List<AttendanceRecordVO>> myAttendance() {
-        return ApiResponse.ok(teachingService.attendanceViews(null, null));
+    public ApiResponse<PageResult<AttendanceRecordVO>> myAttendance(@Valid PageRequest request) {
+        return ApiResponse.ok(teachingService.attendanceViews(request, null, null));
     }
 
     @GetMapping("/api/my/warnings")

@@ -6,7 +6,9 @@ import jakarta.validation.constraints.Min;
 public record PageRequest(
         @Min(1) long page,
         @Min(1) @Max(200) long size,
-        String keyword
+        String keyword,
+        String academicYear,
+        Integer term
 ) {
     public PageRequest {
         if (page == 0) {

@@ -49,14 +49,15 @@ const iconByPath: Record<string, LucideIcon> = {
 }
 
 const titleMap: Record<string, string> = {
-  '/': '我的主页',
+  '/': '主页',
   '/profile': '个人主页',
-  '/schedule': '课表中心',
-  '/class-schedule': '班级课表查询',
-  '/calendar': '校历查询',
-  '/gpa-ranking': '绩点排名查询',
-  '/exams': '考试安排',
-  '/makeup-exams': '补考报名',
+  '/schedule': '个人课表',
+  '/class-schedule': '班级课表',
+  '/calendar': '校历',
+  '/gpa-ranking': '绩点查询',
+  '/my/grades': '成绩查询',
+  '/exams': '考试',
+  '/makeup-exams': '补考',
 }
 
 function titleFor(pathname: string, menus: { name: string; path: string }[]) {
@@ -72,9 +73,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [userOpen, setUserOpen] = useState(false)
   const { data: menus = [] } = useQuery({ queryKey: ['menus', user?.id], queryFn: authApi.menus, enabled: Boolean(user?.id) })
   const visibleMenus = useMemo(() => {
-    const base = menus.filter((menu) => !menu.path.startsWith('/admin') && menu.path !== '/profile')
+    const base = menus
+      .filter((menu) => !menu.path.startsWith('/admin') && menu.path !== '/profile')
+      .map((menu) => ({ ...menu, name: normalizedMenuName(menu.path, menu.name, user?.userType) }))
     if (!base.some((menu) => menu.path === '/')) {
-      return [{ name: '我的主页', path: '/', permission: 'dashboard:view' }, ...base]
+      return [{ name: normalizedMenuName('/', '主页', user?.userType), path: '/', permission: 'dashboard:view' }, ...base]
     }
     return base
   }, [menus])
@@ -181,4 +184,22 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
     </div>
   )
+}
+
+function normalizedMenuName(path: string, fallback: string, userType?: string) {
+  if (userType !== 'STUDENT') {
+    return fallback
+  }
+  const map: Record<string, string> = {
+    '/': '主页',
+    '/calendar': '校历',
+    '/class-schedule': '班级课表',
+    '/schedule': '个人课表',
+    '/my/courses': '我的选课',
+    '/exams': '考试',
+    '/my/grades': '成绩查询',
+    '/gpa-ranking': '绩点查询',
+    '/makeup-exams': '补考',
+  }
+  return map[path] ?? fallback
 }

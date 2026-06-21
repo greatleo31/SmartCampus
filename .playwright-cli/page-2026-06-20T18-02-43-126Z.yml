@@ -1,0 +1,88 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e12]:
+        - generic [ref=e13]: 智慧校园
+        - generic [ref=e14]: 教务服务门户
+    - button "收起导航" [ref=e16]:
+      - img [ref=e17]
+      - generic [ref=e18]: 收起导航
+    - navigation [ref=e19]:
+      - generic [ref=e20]: 常用功能
+      - link "主页" [ref=e22] [cursor=pointer]:
+        - /url: /
+        - img [ref=e23]
+        - generic [ref=e26]: 主页
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "班级课表" [level=1] [ref=e31]
+      - button "陈明轩 学生" [ref=e33]:
+        - img [ref=e35]
+        - generic [ref=e38]:
+          - generic [ref=e39]: 陈明轩
+          - generic [ref=e40]: 学生
+    - generic [ref=e42]:
+      - button "主页" [ref=e43]:
+        - generic [ref=e44]: 主页
+        - img [ref=e46]
+      - button "班级课表" [ref=e49]:
+        - generic [ref=e50]: 班级课表
+        - img [ref=e52]
+      - button "个人课表" [ref=e55]:
+        - generic [ref=e56]: 个人课表
+        - img [ref=e58]
+      - button "我的选课" [ref=e61]:
+        - generic [ref=e62]: 我的选课
+        - img [ref=e64]
+      - button "考试" [ref=e67]:
+        - generic [ref=e68]: 考试
+        - img [ref=e70]
+      - button "成绩查询" [ref=e73]:
+        - generic [ref=e74]: 成绩查询
+        - img [ref=e76]
+    - generic [ref=e80]:
+      - heading "班级课表" [level=1] [ref=e82]
+      - generic [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - generic [ref=e86]: 学年
+            - combobox "学年" [ref=e87]:
+              - option "全部学年" [selected]
+          - generic [ref=e88]:
+            - generic [ref=e89]: 学期
+            - combobox "学期" [ref=e90]:
+              - option "1"
+              - option "2" [selected]
+          - generic [ref=e91]:
+            - button "列表" [ref=e92]:
+              - img [ref=e93]
+              - text: 列表
+            - button "周视图" [ref=e94]:
+              - img [ref=e95]
+              - text: 周视图
+        - table [ref=e101]:
+          - rowgroup [ref=e102]:
+            - row "学期 课程 教学班 任课教师 星期 周次 节次 教室 详情" [ref=e103]:
+              - columnheader "学期" [ref=e104]
+              - columnheader "课程" [ref=e105]
+              - columnheader "教学班" [ref=e106]
+              - columnheader "任课教师" [ref=e107]
+              - columnheader "星期" [ref=e108]
+              - columnheader "周次" [ref=e109]
+              - columnheader "节次" [ref=e110]
+              - columnheader "教室" [ref=e111]
+              - columnheader "详情" [ref=e112]
+          - rowgroup [ref=e113]:
+            - row "暂无数据" [ref=e114]:
+              - cell "暂无数据" [ref=e115]
+        - generic [ref=e116]:
+          - generic [ref=e117]: 共 0 条，第 1 / 1 页
+          - generic [ref=e118]:
+            - combobox [ref=e119]:
+              - option "10 / 页" [selected]
+              - option "20 / 页"
+              - option "50 / 页"
+              - option "100 / 页"
+            - button "上一页" [disabled] [ref=e120]
+            - button "下一页" [disabled] [ref=e121]

@@ -6,13 +6,16 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { DataTable } from '../components/ui/DataTable'
 import { Modal } from '../components/ui/Modal'
+import { PaginationBar } from '../components/ui/PaginationBar'
 
 export function EnrollmentsPage() {
   const qc = useQueryClient()
   const [teachingClassId, setTeachingClassId] = useState(0)
   const [studentId, setStudentId] = useState(0)
   const [open, setOpen] = useState(false)
-  const { data: teachingClasses } = useQuery({ queryKey: ['teachingClasses'], queryFn: campusApi.teachingClasses })
+  const [page, setPage] = useState(1)
+  const [size, setSize] = useState(10)
+  const { data: teachingClasses } = useQuery({ queryKey: ['teachingClasses'], queryFn: () => campusApi.teachingClasses() })
   const { data: students = [] } = useQuery({ queryKey: ['students'], queryFn: campusApi.students })
   const classOptions = teachingClasses?.records ?? []
   const selectedTeachingClassId = teachingClassId || classOptions[0]?.id || 0
@@ -27,9 +30,12 @@ export function EnrollmentsPage() {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['enrollments'] })
       setOpen(false)
+      setPage(1)
     },
   })
   const remove = useMutation({ mutationFn: campusApi.deleteEnrollment, onSuccess: () => qc.invalidateQueries({ queryKey: ['enrollments'] }) })
+  const rows = data as unknown as Record<string, unknown>[]
+  const pagedRows = rows.slice((page - 1) * size, page * size)
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -47,22 +53,23 @@ export function EnrollmentsPage() {
         <div className="mb-4 max-w-xs">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#556273]">当前教学班</span>
-            <select className={inputClass} value={selectedTeachingClassId} onChange={(e) => setTeachingClassId(Number(e.target.value))} required>
+            <select className={inputClass} value={selectedTeachingClassId} onChange={(e) => { setTeachingClassId(Number(e.target.value)); setPage(1) }} required>
               {classOptions.map((item) => <option key={item.id} value={item.id}>{item.className}</option>)}
             </select>
           </label>
         </div>
         <DataTable
-          rows={data as unknown as Record<string, unknown>[]}
+          rows={pagedRows}
           columns={[
             { key: 'teachingClassName', title: '教学班' },
-            { key: 'studentName', title: '学生姓名' },
             { key: 'studentNo', title: '学号' },
+            { key: 'studentName', title: '学生姓名' },
             { key: 'major', title: '专业' },
             { key: 'className', title: '行政班' },
             { key: 'action', title: '操作', render: (row) => <Button variant="danger" onClick={() => window.confirm('确认移除该学生？') && remove.mutate(Number(row.id))}>移除</Button> },
           ]}
         />
+        <PaginationBar total={rows.length} page={page} size={size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
       </Card>
       <Modal open={open} title="加入学生名单" onClose={() => setOpen(false)}>
         <form className="grid gap-4 md:grid-cols-2" onSubmit={submit}>
@@ -73,7 +80,7 @@ export function EnrollmentsPage() {
           </Field>
           <Field label="学生">
             <select className={inputClass} value={selectedStudentId} onChange={(e) => setStudentId(Number(e.target.value))} required>
-              {students.map((item) => <option key={item.id} value={item.id}>{item.realName} · {item.className} · {item.major}</option>)}
+              {students.map((item) => <option key={item.id} value={item.id}>{item.studentNo} · {item.realName} · {item.className} · {item.major}</option>)}
             </select>
           </Field>
           <div className="md:col-span-2"><Button type="submit" disabled={create.isPending || !selectedTeachingClassId || !selectedStudentId}>保存</Button></div>

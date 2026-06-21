@@ -7,7 +7,8 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { DataTable } from '../components/ui/DataTable'
 import { Modal } from '../components/ui/Modal'
-import type { AdminUser, AdminUserPayload, Announcement, AnnouncementCategory, AnnouncementPayload, Permission, Role, ScheduleItem, SchedulePayload, SystemConfig, User } from '../types/api'
+import { PaginationBar } from '../components/ui/PaginationBar'
+import type { AdminUser, AdminUserPayload, Announcement, AnnouncementCategory, AnnouncementPayload, Permission, Role, ScheduleItem, SchedulePayload, SystemConfig, TeachingClass, User } from '../types/api'
 
 type ModalState =
   | { type: 'announcement'; item?: Announcement }
@@ -102,19 +103,24 @@ function AdminStats() {
 function AnnouncementsAdmin({ open }: { open: (modal: ModalState) => void }) {
   const qc = useQueryClient()
   const { data = [] } = useQuery({ queryKey: ['adminAnnouncements'], queryFn: campusApi.adminAnnouncements })
+  const [page, setPage] = useState(1)
+  const [size, setSize] = useState(10)
   const remove = useMutation({
     mutationFn: campusApi.deleteAnnouncement,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['adminAnnouncements'] }),
   })
+  const rows = data as unknown as Record<string, unknown>[]
+  const pagedRows = rows.slice((page - 1) * size, page * size)
   return (
     <Section title="公告管理" action={<Button onClick={() => open({ type: 'announcement' })}><Plus size={16} />发布公告</Button>}>
-      <DataTable rows={data as unknown as Record<string, unknown>[]} columns={[
+      <DataTable rows={pagedRows} columns={[
         { key: 'title', title: '标题' },
         { key: 'category', title: '分类', render: (row) => categoryLabels[row.category as AnnouncementCategory] },
         { key: 'status', title: '状态', render: (row) => row.status === 'PUBLISHED' ? '已发布' : '草稿' },
         { key: 'publishTime', title: '发布时间', render: (row) => String(row.publishTime ?? '-').slice(0, 16).replace('T', ' ') },
         { key: 'actions', title: '操作', render: (row) => <Actions><button onClick={() => open({ type: 'announcement', item: row as unknown as Announcement })}><Edit3 size={14} />编辑</button><button onClick={() => confirmDelete(() => remove.mutate(Number(row.id)))}><Trash2 size={14} />删除</button></Actions> },
       ]} />
+      <PaginationBar total={rows.length} page={page} size={size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
     </Section>
   )
 }
@@ -122,20 +128,26 @@ function AnnouncementsAdmin({ open }: { open: (modal: ModalState) => void }) {
 function UsersAdmin({ open }: { open: (modal: ModalState) => void }) {
   const qc = useQueryClient()
   const { data = [] } = useQuery({ queryKey: ['adminUsers'], queryFn: campusApi.adminUsers })
+  const [page, setPage] = useState(1)
+  const [size, setSize] = useState(10)
   const status = useMutation({
     mutationFn: ({ id, next }: { id: number; next: number }) => campusApi.setUserStatus(id, next),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['adminUsers'] }),
   })
+  const rows = data as unknown as Record<string, unknown>[]
+  const pagedRows = rows.slice((page - 1) * size, page * size)
   return (
     <Section title="用户管理" action={<Button onClick={() => open({ type: 'user' })}><Plus size={16} />新增用户</Button>}>
-      <DataTable rows={data as unknown as Record<string, unknown>[]} columns={[
+      <DataTable rows={pagedRows} columns={[
         { key: 'username', title: '用户名' },
         { key: 'realName', title: '姓名' },
         { key: 'userType', title: '身份', render: (row) => roleLabels[row.userType as User['userType']] },
+        { key: 'teacherNo', title: '工号', render: (row) => String(row.teacherNo ?? '-') },
         { key: 'status', title: '状态', render: (row) => Number(row.status) === 1 ? '启用' : '停用' },
         { key: 'roles', title: '角色', render: (row) => (row.roles as string[]).join('、') },
         { key: 'actions', title: '操作', render: (row) => <Actions><button onClick={() => open({ type: 'user', item: row as unknown as AdminUser })}><Edit3 size={14} />编辑</button><button onClick={() => status.mutate({ id: Number(row.id), next: Number(row.status) === 1 ? 0 : 1 })}>{Number(row.status) === 1 ? '停用' : '启用'}</button></Actions> },
       ]} />
+      <PaginationBar total={rows.length} page={page} size={size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
     </Section>
   )
 }
@@ -143,21 +155,31 @@ function UsersAdmin({ open }: { open: (modal: ModalState) => void }) {
 function RolesAdmin({ open }: { open: (modal: ModalState) => void }) {
   const { data: roles = [] } = useQuery({ queryKey: ['adminRoles'], queryFn: campusApi.adminRoles })
   const { data: permissions = [] } = useQuery({ queryKey: ['adminPermissions'], queryFn: campusApi.adminPermissions })
+  const [rolePage, setRolePage] = useState(1)
+  const [roleSize, setRoleSize] = useState(10)
+  const [permissionPage, setPermissionPage] = useState(1)
+  const [permissionSize, setPermissionSize] = useState(10)
+  const roleRows = roles as unknown as Record<string, unknown>[]
+  const permissionRows = permissions as unknown as Record<string, unknown>[]
+  const pagedRoles = roleRows.slice((rolePage - 1) * roleSize, rolePage * roleSize)
+  const pagedPermissions = permissionRows.slice((permissionPage - 1) * permissionSize, permissionPage * permissionSize)
   return (
     <div className="grid gap-5 xl:grid-cols-2">
       <Section title="角色" action={<Button onClick={() => open({ type: 'role' })}><Plus size={16} />新增角色</Button>}>
-        <DataTable rows={roles as unknown as Record<string, unknown>[]} columns={[
+        <DataTable rows={pagedRoles} columns={[
           { key: 'name', title: '名称' },
           { key: 'dataScope', title: '数据范围', render: (row) => dataScopeLabels[String(row.dataScope)] ?? String(row.dataScope ?? '-') },
           { key: 'actions', title: '操作', render: (row) => <Actions><button onClick={() => open({ type: 'role', item: row as unknown as Role })}><Edit3 size={14} />编辑</button></Actions> },
         ]} />
+        <PaginationBar total={roleRows.length} page={rolePage} size={roleSize} onPageChange={setRolePage} onSizeChange={(next) => { setRoleSize(next); setRolePage(1) }} />
       </Section>
       <Section title="权限" action={<Button onClick={() => open({ type: 'permission' })}><Plus size={16} />新增权限</Button>}>
-        <DataTable rows={permissions as unknown as Record<string, unknown>[]} columns={[
+        <DataTable rows={pagedPermissions} columns={[
           { key: 'name', title: '名称' },
           { key: 'roleCode', title: '角色', render: (row) => roleCodeText(String(row.roleCode)) },
           { key: 'actions', title: '操作', render: (row) => <Actions><button onClick={() => open({ type: 'permission', item: row as unknown as Permission })}><Edit3 size={14} />编辑</button></Actions> },
         ]} />
+        <PaginationBar total={permissionRows.length} page={permissionPage} size={permissionSize} onPageChange={setPermissionPage} onSizeChange={(next) => { setPermissionSize(next); setPermissionPage(1) }} />
       </Section>
     </div>
   )
@@ -165,14 +187,19 @@ function RolesAdmin({ open }: { open: (modal: ModalState) => void }) {
 
 function ConfigsAdmin({ open }: { open: (modal: ModalState) => void }) {
   const { data = [] } = useQuery({ queryKey: ['adminConfigs'], queryFn: campusApi.adminConfigs })
+  const [page, setPage] = useState(1)
+  const [size, setSize] = useState(10)
+  const rows = data as unknown as Record<string, unknown>[]
+  const pagedRows = rows.slice((page - 1) * size, page * size)
   return (
     <Section title="系统配置">
-      <DataTable rows={data as unknown as Record<string, unknown>[]} columns={[
+      <DataTable rows={pagedRows} columns={[
         { key: 'configKey', title: '键' },
         { key: 'configName', title: '名称' },
         { key: 'configValue', title: '值' },
         { key: 'actions', title: '操作', render: (row) => <Actions><button onClick={() => open({ type: 'config', item: row as unknown as SystemConfig })}><Edit3 size={14} />编辑</button></Actions> },
       ]} />
+      <PaginationBar total={rows.length} page={page} size={size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
     </Section>
   )
 }
@@ -180,13 +207,17 @@ function ConfigsAdmin({ open }: { open: (modal: ModalState) => void }) {
 function SchedulesAdmin({ open }: { open: (modal: ModalState) => void }) {
   const qc = useQueryClient()
   const { data = [] } = useQuery({ queryKey: ['adminSchedules'], queryFn: campusApi.adminSchedules })
+  const [page, setPage] = useState(1)
+  const [size, setSize] = useState(10)
   const remove = useMutation({
     mutationFn: campusApi.deleteSchedule,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['adminSchedules'] }),
   })
+  const rows = data as unknown as Record<string, unknown>[]
+  const pagedRows = rows.slice((page - 1) * size, page * size)
   return (
     <Section title="课表管理" action={<Button onClick={() => open({ type: 'schedule' })}><Plus size={16} />新增课表</Button>}>
-      <DataTable rows={data as unknown as Record<string, unknown>[]} columns={[
+      <DataTable rows={pagedRows} columns={[
         { key: 'courseName', title: '课程' },
         { key: 'className', title: '教学班' },
         { key: 'teacherName', title: '教师' },
@@ -195,6 +226,7 @@ function SchedulesAdmin({ open }: { open: (modal: ModalState) => void }) {
         { key: 'classroom', title: '教室' },
         { key: 'actions', title: '操作', render: (row) => <Actions><button onClick={() => open({ type: 'schedule', item: row as unknown as ScheduleItem })}><Edit3 size={14} />编辑</button><button onClick={() => confirmDelete(() => remove.mutate(Number(row.id)))}><Trash2 size={14} />删除</button></Actions> },
       ]} />
+      <PaginationBar total={rows.length} page={page} size={size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
     </Section>
   )
 }
@@ -234,11 +266,23 @@ function AnnouncementForm({ item, close }: { item?: Announcement; close: () => v
 function UserForm({ item, close }: { item?: AdminUser; close: () => void }) {
   const qc = useQueryClient()
   const { data: roles = [] } = useQuery({ queryKey: ['adminRoles'], queryFn: campusApi.adminRoles })
-  const [form, setForm] = useState<AdminUserPayload>({ username: item?.username ?? '', realName: item?.realName ?? '', userType: item?.userType ?? 'STUDENT', status: item?.status ?? 1, roleIds: [], password: '' })
+  const { data: colleges = [] } = useQuery({ queryKey: ['colleges'], queryFn: campusApi.colleges })
+  const [form, setForm] = useState<AdminUserPayload>({
+    username: item?.username ?? '',
+    realName: item?.realName ?? '',
+    userType: item?.userType ?? 'STUDENT',
+    status: item?.status ?? 1,
+    roleIds: [],
+    password: '',
+    entryYear: item?.entryYear,
+    collegeId: item?.collegeId,
+    department: item?.department ?? '',
+    title: item?.title ?? '',
+  })
   const matchedRoleId = roles.find((role) => item?.roles.includes(role.code))?.id
   const selectedRoleId = form.roleIds[0] ?? matchedRoleId ?? ''
-  const save = useMutation({ mutationFn: () => item ? campusApi.updateUser(item.id, userPayload({ ...form, roleIds: [Number(selectedRoleId)] }, true)) : campusApi.createUser(userPayload(form, false)), onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['adminUsers'] }); close() } })
-  return <Form onSubmit={() => save.mutate()}><Field label="用户名"><input className={inputClass} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></Field><Field label="姓名"><input className={inputClass} value={form.realName} onChange={(e) => setForm({ ...form, realName: e.target.value })} required /></Field><Field label="身份"><select className={inputClass} value={form.userType} onChange={(e) => setForm({ ...form, userType: e.target.value as User['userType'] })}>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></Field><Field label="状态"><select className={inputClass} value={form.status} onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}><option value={1}>启用</option><option value={0}>停用</option></select></Field><Field label={item ? '新密码' : '初始密码'}><input className={inputClass} type="password" value={form.password ?? ''} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!item} /></Field><Field label="角色"><select className={inputClass} value={selectedRoleId} onChange={(e) => setForm({ ...form, roleIds: [Number(e.target.value)] })} required><option value="" disabled>选择角色</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></Field><Submit pending={save.isPending} /></Form>
+  const save = useMutation({ mutationFn: () => item ? campusApi.updateUser(item.id, userPayload({ ...form, roleIds: [Number(selectedRoleId)] }, true)) : campusApi.createUser(userPayload({ ...form, roleIds: [Number(selectedRoleId)] }, false)), onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['adminUsers'] }); await qc.invalidateQueries({ queryKey: ['teachers'] }); close() } })
+  return <Form onSubmit={() => save.mutate()}><Field label="用户名"><input className={inputClass} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required /></Field><Field label="姓名"><input className={inputClass} value={form.realName} onChange={(e) => setForm({ ...form, realName: e.target.value })} required /></Field><Field label="身份"><select className={inputClass} value={form.userType} onChange={(e) => setForm({ ...form, userType: e.target.value as User['userType'] })}>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></Field><Field label="状态"><select className={inputClass} value={form.status} onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}><option value={1}>启用</option><option value={0}>停用</option></select></Field><Field label={item ? '新密码' : '初始密码'}><input className={inputClass} type="password" value={form.password ?? ''} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!item} /></Field><Field label="角色"><select className={inputClass} value={selectedRoleId} onChange={(e) => setForm({ ...form, roleIds: [Number(e.target.value)] })} required><option value="" disabled>选择角色</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></Field>{form.userType === 'TEACHER' && <><Field label="入职年份"><input className={inputClass} type="number" min={1900} max={9999} value={form.entryYear ?? ''} onChange={(e) => setForm({ ...form, entryYear: Number(e.target.value) || undefined })} required /></Field><Field label="学院"><select className={inputClass} value={form.collegeId ?? ''} onChange={(e) => setForm({ ...form, collegeId: Number(e.target.value) || undefined })} required><option value="" disabled>选择学院</option>{colleges.map((college) => <option key={college.id} value={college.id}>{college.name}</option>)}</select></Field><Field label="部门"><input className={inputClass} value={form.department ?? ''} onChange={(e) => setForm({ ...form, department: e.target.value })} required /></Field><Field label="职称"><input className={inputClass} value={form.title ?? ''} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>{item?.teacherNo && <Field label="当前工号"><input className={`${inputClass} bg-[#f7f8f5]`} value={item.teacherNo} readOnly /></Field>}</>}<Submit pending={save.isPending} /></Form>
 }
 
 function RoleForm({ item, close }: { item?: Role; close: () => void }) {
@@ -264,10 +308,22 @@ function ConfigForm({ item, close }: { item: SystemConfig; close: () => void }) 
 
 function ScheduleForm({ item, close }: { item?: ScheduleItem; close: () => void }) {
   const qc = useQueryClient()
-  const { data: page } = useQuery({ queryKey: ['teachingClasses'], queryFn: campusApi.teachingClasses })
+  const { data: page } = useQuery({ queryKey: ['teachingClasses'], queryFn: () => campusApi.teachingClasses() })
+  const [teachingClassKeyword, setTeachingClassKeyword] = useState('')
   const [form, setForm] = useState<SchedulePayload>({ teachingClassId: item?.teachingClassId ?? 0, dayOfWeek: item?.dayOfWeek ?? 1, startSection: item?.startSection ?? 1, endSection: item?.endSection ?? 2, startWeek: item?.startWeek ?? 1, endWeek: item?.endWeek ?? 16, classroom: item?.classroom ?? '', location: item?.location ?? '' })
-  const save = useMutation({ mutationFn: () => item ? campusApi.updateSchedule(item.id, form) : campusApi.createSchedule(form), onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['adminSchedules'] }); await qc.invalidateQueries({ queryKey: ['mySchedules'] }); close() } })
-  return <Form onSubmit={() => save.mutate()}><Field label="教学班"><select className={inputClass} value={form.teachingClassId || ''} onChange={(e) => setForm({ ...form, teachingClassId: Number(e.target.value) })} required><option value="" disabled>选择教学班</option>{(page?.records ?? []).map((row) => <option key={row.id} value={row.id}>{row.className}</option>)}</select></Field><Field label="星期"><select className={inputClass} value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: Number(e.target.value) })}>{[1, 2, 3, 4, 5, 6, 7].map((day) => <option key={day} value={day}>周{'一二三四五六日'[day - 1]}</option>)}</select></Field><Field label="开始节"><input className={inputClass} type="number" min={1} max={14} value={form.startSection} onChange={(e) => setForm({ ...form, startSection: Number(e.target.value) })} /></Field><Field label="结束节"><input className={inputClass} type="number" min={1} max={14} value={form.endSection} onChange={(e) => setForm({ ...form, endSection: Number(e.target.value) })} /></Field><Field label="开始周"><input className={inputClass} type="number" min={1} value={form.startWeek} onChange={(e) => setForm({ ...form, startWeek: Number(e.target.value) })} /></Field><Field label="结束周"><input className={inputClass} type="number" min={1} value={form.endWeek} onChange={(e) => setForm({ ...form, endWeek: Number(e.target.value) })} /></Field><Field label="教室"><input className={inputClass} value={form.classroom} onChange={(e) => setForm({ ...form, classroom: e.target.value })} required /></Field><Field label="地点"><input className={inputClass} value={form.location ?? ''} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field><Submit pending={save.isPending} /></Form>
+  const teachingClassRows: TeachingClass[] = page?.records ?? []
+  const teachingClassOptions = teachingClassRows.filter((row) => matchesKeyword(teachingClassKeyword, row.className, row.courseName, row.teacherName, row.semesterName))
+  const selectedTeachingClassId = form.teachingClassId || teachingClassOptions[0]?.id || teachingClassRows[0]?.id || 0
+  const save = useMutation({
+    mutationFn: () => item ? campusApi.updateSchedule(item.id, { ...form, teachingClassId: selectedTeachingClassId }) : campusApi.createSchedule({ ...form, teachingClassId: selectedTeachingClassId }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['adminSchedules'] })
+      await qc.invalidateQueries({ queryKey: ['mySchedules'] })
+      await qc.invalidateQueries({ queryKey: ['classSchedules'] })
+      close()
+    },
+  })
+  return <Form onSubmit={() => save.mutate()}><Field label="教学班"><div className="space-y-2"><input className={inputClass} value={teachingClassKeyword} placeholder="搜索教学班/课程/教师/学期" onChange={(e) => { setTeachingClassKeyword(e.target.value); setForm({ ...form, teachingClassId: 0 }) }} /><select className={inputClass} value={selectedTeachingClassId || ''} onChange={(e) => setForm({ ...form, teachingClassId: Number(e.target.value) })} required><option value="" disabled>{teachingClassOptions.length ? '选择教学班' : '没有匹配结果'}</option>{teachingClassOptions.map((row) => <option key={row.id} value={row.id}>{row.className} · {row.courseName} · {row.teacherName} · {row.semesterName}</option>)}</select></div></Field><Field label="星期"><select className={inputClass} value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: Number(e.target.value) })}>{[1, 2, 3, 4, 5, 6, 7].map((day) => <option key={day} value={day}>周{'一二三四五六日'[day - 1]}</option>)}</select></Field><Field label="开始节"><input className={inputClass} type="number" min={1} max={14} value={form.startSection} onChange={(e) => setForm({ ...form, startSection: Number(e.target.value) })} /></Field><Field label="结束节"><input className={inputClass} type="number" min={1} max={14} value={form.endSection} onChange={(e) => setForm({ ...form, endSection: Number(e.target.value) })} /></Field><Field label="开始周"><input className={inputClass} type="number" min={1} value={form.startWeek} onChange={(e) => setForm({ ...form, startWeek: Number(e.target.value) })} /></Field><Field label="结束周"><input className={inputClass} type="number" min={1} value={form.endWeek} onChange={(e) => setForm({ ...form, endWeek: Number(e.target.value) })} /></Field><Field label="教室"><input className={inputClass} value={form.classroom} onChange={(e) => setForm({ ...form, classroom: e.target.value })} required /></Field><Field label="地点"><input className={inputClass} value={form.location ?? ''} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field><Submit pending={save.isPending} /></Form>
 }
 
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
@@ -310,6 +366,12 @@ function roleCodeText(code: string) {
   if (code === 'TEACHER') return '教师'
   if (code === 'STUDENT') return '学生'
   return code
+}
+
+function matchesKeyword(keyword: string, ...values: Array<string | undefined>) {
+  const normalized = keyword.trim().toLowerCase()
+  if (!normalized) return true
+  return values.some((value) => value?.toLowerCase().includes(normalized))
 }
 
 const inputClass = 'h-10 w-full rounded-md border border-[#cfd8d2] bg-white px-3 text-sm text-[#172235] outline-none transition focus:border-[var(--campus-green)] focus:ring-2 focus:ring-emerald-100'

@@ -1,0 +1,115 @@
+- generic [ref=e22]:
+  - complementary [ref=e23]:
+    - generic [ref=e24]:
+      - img [ref=e26]
+      - generic [ref=e31]:
+        - generic [ref=e32]: 智慧校园
+        - generic [ref=e33]: 教务服务门户
+    - button "收起导航" [ref=e35]:
+      - img [ref=e36]
+      - generic [ref=e37]: 收起导航
+    - navigation [ref=e38]:
+      - generic [ref=e39]: 常用功能
+      - generic [ref=e40]:
+        - link "主页" [ref=e41] [cursor=pointer]:
+          - /url: /
+          - img [ref=e42]
+          - generic [ref=e45]: 主页
+        - link "校历" [ref=e46] [cursor=pointer]:
+          - /url: /calendar
+          - img [ref=e47]
+          - generic [ref=e49]: 校历
+        - link "班级课表" [ref=e50] [cursor=pointer]:
+          - /url: /class-schedule
+          - img [ref=e51]
+          - generic [ref=e53]: 班级课表
+        - link "个人课表" [ref=e54] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e55]
+          - generic [ref=e57]: 个人课表
+        - link "我的选课" [ref=e58] [cursor=pointer]:
+          - /url: /my/courses
+          - img [ref=e59]
+          - generic [ref=e61]: 我的选课
+        - link "考试" [ref=e62] [cursor=pointer]:
+          - /url: /exams
+          - img [ref=e63]
+          - generic [ref=e67]: 考试
+        - link "成绩查询" [ref=e68] [cursor=pointer]:
+          - /url: /my/grades
+          - img [ref=e69]
+          - generic [ref=e72]: 成绩查询
+        - link "绩点查询" [ref=e73] [cursor=pointer]:
+          - /url: /gpa-ranking
+          - img [ref=e74]
+          - generic [ref=e77]: 绩点查询
+        - link "补考" [ref=e78] [cursor=pointer]:
+          - /url: /makeup-exams
+          - img [ref=e79]
+          - generic [ref=e83]: 补考
+  - main [ref=e84]:
+    - generic [ref=e85]:
+      - heading "主页" [level=1] [ref=e88]
+      - button "陈明轩 学生" [ref=e90]:
+        - img [ref=e92]
+        - generic [ref=e95]:
+          - generic [ref=e96]: 陈明轩
+          - generic [ref=e97]: 学生
+    - button "主页" [ref=e100]:
+      - generic [ref=e101]: 主页
+      - img [ref=e103]
+    - generic [ref=e107]:
+      - generic [ref=e109]:
+        - heading "陈明轩，上午好" [level=1] [ref=e111]
+        - generic [ref=e112]:
+          - img [ref=e113]
+          - generic [ref=e115]:
+            - generic [ref=e116]: 广州实时天气
+            - generic [ref=e117]: 雷雨 · 26.8℃
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - generic [ref=e120]:
+            - img [ref=e121]
+            - heading "公告栏" [level=2] [ref=e124]
+          - generic [ref=e125]:
+            - button "通知" [ref=e126]
+            - button "会议" [ref=e127]
+            - button "公示" [ref=e128]
+            - button "讲座" [ref=e129]
+          - generic [ref=e130]:
+            - button "【置顶】关于2026年春季学期选课结果核对的通知 2026-03-01" [ref=e131]:
+              - generic [ref=e132]: 【置顶】关于2026年春季学期选课结果核对的通知
+              - generic [ref=e133]: 2026-03-01
+            - button "关于开展本科课堂教学秩序检查的通知 2026-03-03" [ref=e134]:
+              - generic [ref=e135]: 关于开展本科课堂教学秩序检查的通知
+              - generic [ref=e136]: 2026-03-03
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - generic [ref=e139]: 动物解剖学
+            - generic [ref=e140]: 周一 第1-2节 · 教1-201
+          - generic [ref=e141]:
+            - generic [ref=e142]: 兽医微生物学
+            - generic [ref=e143]: 周二 第3-4节 · 教1-202
+          - generic [ref=e144]:
+            - generic [ref=e145]: 动物解剖学
+            - generic [ref=e146]: 周三 第3-5节 · 实训楼-301
+          - generic [ref=e147]:
+            - generic [ref=e148]: 兽医微生物学
+            - generic [ref=e149]: 周四 第5-7节 · 实训楼-302
+      - generic [ref=e150]:
+        - generic [ref=e151]:
+          - img [ref=e152]
+          - heading "我的课表" [level=2] [ref=e155]
+        - generic [ref=e156]:
+          - generic [ref=e157]:
+            - generic [ref=e158]: 动物解剖学
+            - generic [ref=e159]: 周一 第1-2节 · 教1-201
+          - generic [ref=e160]:
+            - generic [ref=e161]: 兽医微生物学
+            - generic [ref=e162]: 周二 第3-4节 · 教1-202
+          - generic [ref=e163]:
+            - generic [ref=e164]: 动物解剖学
+            - generic [ref=e165]: 周三 第3-5节 · 实训楼-301
+          - generic [ref=e166]:
+            - generic [ref=e167]: 兽医微生物学
+            - generic [ref=e168]: 周四 第5-7节 · 实训楼-302

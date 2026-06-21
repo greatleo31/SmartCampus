@@ -1,0 +1,121 @@
+- generic [ref=e22]:
+  - complementary [ref=e23]:
+    - generic [ref=e24]:
+      - img [ref=e26]
+      - generic [ref=e31]:
+        - generic [ref=e32]: 智慧校园
+        - generic [ref=e33]: 教务服务门户
+    - button "收起导航" [ref=e35]:
+      - img [ref=e36]
+      - generic [ref=e37]: 收起导航
+    - navigation [ref=e38]:
+      - generic [ref=e39]: 常用功能
+      - generic [ref=e40]:
+        - link "主页" [ref=e41] [cursor=pointer]:
+          - /url: /
+          - img [ref=e42]
+          - generic [ref=e45]: 主页
+        - link "校历" [ref=e46] [cursor=pointer]:
+          - /url: /calendar
+          - img [ref=e47]
+          - generic [ref=e49]: 校历
+        - link "班级课表" [ref=e50] [cursor=pointer]:
+          - /url: /class-schedule
+          - img [ref=e51]
+          - generic [ref=e53]: 班级课表
+        - link "个人课表" [ref=e54] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e55]
+          - generic [ref=e57]: 个人课表
+        - link "我的选课" [active] [ref=e58] [cursor=pointer]:
+          - /url: /my/courses
+          - img [ref=e59]
+          - generic [ref=e61]: 我的选课
+        - link "考试" [ref=e62] [cursor=pointer]:
+          - /url: /exams
+          - img [ref=e63]
+          - generic [ref=e67]: 考试
+        - link "成绩查询" [ref=e68] [cursor=pointer]:
+          - /url: /my/grades
+          - img [ref=e69]
+          - generic [ref=e72]: 成绩查询
+        - link "绩点查询" [ref=e73] [cursor=pointer]:
+          - /url: /gpa-ranking
+          - img [ref=e74]
+          - generic [ref=e77]: 绩点查询
+        - link "补考" [ref=e78] [cursor=pointer]:
+          - /url: /makeup-exams
+          - img [ref=e79]
+          - generic [ref=e83]: 补考
+  - main [ref=e84]:
+    - generic [ref=e85]:
+      - heading "我的选课" [level=1] [ref=e169]
+      - button "陈明轩 学生" [ref=e90]:
+        - img [ref=e92]
+        - generic [ref=e95]:
+          - generic [ref=e96]: 陈明轩
+          - generic [ref=e97]: 学生
+    - generic [ref=e99]:
+      - button "主页" [ref=e100]:
+        - generic [ref=e101]: 主页
+        - img [ref=e103]
+      - button "班级课表" [ref=e170]:
+        - generic [ref=e171]: 班级课表
+        - img [ref=e173]
+      - button "个人课表" [ref=e176]:
+        - generic [ref=e177]: 个人课表
+        - img [ref=e179]
+      - button "我的选课" [ref=e182]:
+        - generic [ref=e183]: 我的选课
+        - img [ref=e185]
+    - generic [ref=e188]:
+      - heading "我的选课" [level=1] [ref=e190]
+      - generic [ref=e191]:
+        - generic [ref=e192]:
+          - generic [ref=e193]:
+            - generic [ref=e194]: 关键词
+            - textbox "关键词" [ref=e195]:
+              - /placeholder: 搜索课程、教学班、地点、状态等
+          - generic [ref=e196]:
+            - generic [ref=e197]: 学年
+            - combobox "学年" [ref=e198]:
+              - option "全部学年" [selected]
+              - option "2026-2027"
+              - option "2025-2026"
+          - generic [ref=e199]:
+            - generic [ref=e200]: 学期
+            - combobox "学期" [ref=e201]:
+              - option "1"
+              - option "2" [selected]
+          - button "重置" [ref=e203]
+        - table [ref=e205]:
+          - rowgroup [ref=e206]:
+            - row "教学班 学期 课程 教师 容量" [ref=e207]:
+              - columnheader "教学班" [ref=e208]
+              - columnheader "学期" [ref=e209]
+              - columnheader "课程" [ref=e210]
+              - columnheader "教师" [ref=e211]
+              - columnheader "容量" [ref=e212]
+          - rowgroup [ref=e213]:
+            - row "兽医微生物学-24动物医学1班 2025-2026-2 兽医微生物学 王芳 45" [ref=e214]:
+              - cell "兽医微生物学-24动物医学1班" [ref=e215]
+              - cell "2025-2026-2" [ref=e216]
+              - cell "兽医微生物学" [ref=e217]
+              - cell "王芳" [ref=e218]
+              - cell "45" [ref=e219]
+            - row "动物解剖学-24动物医学1班 2025-2026-2 动物解剖学 李明 45" [ref=e220]:
+              - cell "动物解剖学-24动物医学1班" [ref=e221]
+              - cell "2025-2026-2" [ref=e222]
+              - cell "动物解剖学" [ref=e223]
+              - cell "李明" [ref=e224]
+              - cell "45" [ref=e225]
+        - generic [ref=e226]:
+          - generic [ref=e227]: 共 2 条，第 1 / 1 页
+          - generic [ref=e228]:
+            - combobox [ref=e229]:
+              - option "10 / 页" [selected]
+              - option "20 / 页"
+              - option "50 / 页"
+              - option "100 / 页"
+            - button "上一页" [disabled] [ref=e230]
+            - button "下一页" [disabled] [ref=e231]

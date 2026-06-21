@@ -23,6 +23,12 @@ public class ScheduleController {
         return ApiResponse.ok(scheduleService.mySchedules());
     }
 
+    @GetMapping("/api/schedules/class")
+    @PreAuthorize("hasAuthority('dashboard:view') or hasAuthority('schedule:view') or hasAuthority('student:course:view') or hasAuthority('student:schedule:view') or hasAuthority('student:class-schedule:view')")
+    public ApiResponse<List<ScheduleItemVO>> classSchedules() {
+        return ApiResponse.ok(scheduleService.classSchedules());
+    }
+
     @GetMapping("/api/admin/schedules")
     @PreAuthorize("hasAuthority('schedule:manage')")
     public ApiResponse<List<ScheduleItemVO>> allSchedules() {

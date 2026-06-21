@@ -7,11 +7,16 @@ DROP TABLE IF EXISTS grade_record;
 DROP TABLE IF EXISTS class_schedule;
 DROP TABLE IF EXISTS announcement;
 DROP TABLE IF EXISTS system_config;
+DROP TABLE IF EXISTS academic_calendar_day;
+DROP TABLE IF EXISTS academic_calendar;
 DROP TABLE IF EXISTS teaching_class_student;
 DROP TABLE IF EXISTS teaching_class;
 DROP TABLE IF EXISTS student_profile;
 DROP TABLE IF EXISTS teacher_profile;
 DROP TABLE IF EXISTS course;
+DROP TABLE IF EXISTS admin_class;
+DROP TABLE IF EXISTS major;
+DROP TABLE IF EXISTS college;
 DROP TABLE IF EXISTS semester;
 DROP TABLE IF EXISTS sys_user_role;
 DROP TABLE IF EXISTS sys_permission;
@@ -88,17 +93,65 @@ CREATE TABLE semester (
   KEY idx_semester_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE college (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  code VARCHAR(64) NOT NULL,
+  name VARCHAR(128) NOT NULL,
+  short_name VARCHAR(64) NULL,
+  teacher_code CHAR(2) NOT NULL,
+  founded_year INT NULL,
+  display_order INT NOT NULL DEFAULT 0,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_college_code (code),
+  UNIQUE KEY uk_college_teacher_code (teacher_code),
+  KEY idx_college_order (display_order),
+  KEY idx_college_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE major (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  college_id BIGINT NOT NULL,
+  code VARCHAR(64) NOT NULL,
+  name VARCHAR(128) NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_major_code (code),
+  KEY idx_major_college (college_id),
+  KEY idx_major_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE admin_class (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  major_id BIGINT NOT NULL,
+  class_name VARCHAR(128) NOT NULL,
+  grade_year INT NOT NULL,
+  class_no INT NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_admin_class_name (class_name),
+  KEY idx_admin_class_major (major_id),
+  KEY idx_admin_class_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE course (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   code VARCHAR(64) NOT NULL,
   name VARCHAR(128) NOT NULL,
+  alias_name VARCHAR(128) NULL,
+  college_id BIGINT NULL,
   credit DECIMAL(4,1) NOT NULL,
   hours INT NOT NULL,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_course_code (code),
+  KEY idx_course_college (college_id),
   KEY idx_course_name (name),
+  KEY idx_course_alias_name (alias_name),
   KEY idx_course_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -106,6 +159,7 @@ CREATE TABLE teacher_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
   teacher_no VARCHAR(64) NOT NULL,
+  college_id BIGINT NULL,
   department VARCHAR(128) NOT NULL,
   title VARCHAR(64) NULL,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -113,6 +167,7 @@ CREATE TABLE teacher_profile (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_teacher_user (user_id),
   UNIQUE KEY uk_teacher_no (teacher_no),
+  KEY idx_teacher_college (college_id),
   KEY idx_teacher_department (department)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -120,6 +175,8 @@ CREATE TABLE student_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
   student_no VARCHAR(64) NOT NULL,
+  major_id BIGINT NULL,
+  admin_class_id BIGINT NULL,
   major VARCHAR(128) NOT NULL,
   class_name VARCHAR(128) NOT NULL,
   grade_year INT NOT NULL,
@@ -128,6 +185,8 @@ CREATE TABLE student_profile (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_student_user (user_id),
   UNIQUE KEY uk_student_no (student_no),
+  KEY idx_student_major_id (major_id),
+  KEY idx_student_admin_class (admin_class_id),
   KEY idx_student_major (major),
   KEY idx_student_class (class_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -261,4 +320,35 @@ CREATE TABLE system_config (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_config_key (config_key),
   KEY idx_config_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE academic_calendar (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  academic_year VARCHAR(20) NOT NULL,
+  term INT NOT NULL,
+  year_label INT NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_calendar_year_term (academic_year, term),
+  KEY idx_calendar_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE academic_calendar_day (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  calendar_id BIGINT NOT NULL,
+  calendar_date DATE NOT NULL,
+  week_no INT NULL,
+  month_label VARCHAR(20) NULL,
+  day_text VARCHAR(20) NOT NULL,
+  event_name VARCHAR(128) NULL,
+  day_type VARCHAR(20) NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_calendar_day (calendar_id, calendar_date),
+  KEY idx_calendar_day_date (calendar_date),
+  KEY idx_calendar_day_type (day_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

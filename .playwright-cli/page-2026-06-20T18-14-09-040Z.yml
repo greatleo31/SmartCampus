@@ -1,0 +1,19 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]: 智慧校园统一身份认证平台
+    - generic [ref=e8]: 厚德 / 博学 / 求实 / 创新
+  - main [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: 账号密码登录
+        - heading "统一身份认证" [level=1] [ref=e13]
+        - paragraph [ref=e14]: 请使用校园账号进入教务运行中心
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: 用户名
+          - textbox "用户名" [active] [ref=e17]: student01
+        - generic [ref=e18]:
+          - text: 密码
+          - textbox "密码" [ref=e19]
+        - button "登录" [ref=e20]
+      - generic [ref=e21]: 演示账号：admin / 123456。请勿在公共设备保存登录状态。

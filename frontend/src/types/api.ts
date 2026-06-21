@@ -38,6 +38,9 @@ export type Course = {
   id: number
   code: string
   name: string
+  aliasName?: string
+  collegeId?: number
+  collegeName?: string
   credit: number
   hours: number
 }
@@ -56,6 +59,7 @@ export type TeacherProfile = {
   userId?: number
   teacherNo: string
   realName: string
+  collegeName: string
   department: string
   title?: string
 }
@@ -65,6 +69,7 @@ export type StudentProfile = {
   userId?: number
   studentNo: string
   realName: string
+  collegeName: string
   major: string
   className: string
   gradeYear: number
@@ -81,8 +86,10 @@ export type Enrollment = {
 
 export type GradeRecord = {
   id: number
+  semesterName: string
   teachingClassName: string
   courseName: string
+  studentNo: string
   studentName: string
   regularScore: number
   finalScore: number
@@ -91,10 +98,17 @@ export type GradeRecord = {
 
 export type AttendanceRecord = {
   id: number
-  teachingClassName: string
-  courseName: string
+  adminClassName: string
+  studentNo: string
   studentName: string
+  courseName: string
+  semesterName: string
+  teachingClassName: string
   attendanceDate: string
+  weekLabel: string
+  teacherName: string
+  sectionLabel: string
+  classroom: string
   status: 'NORMAL' | 'LATE' | 'EARLY_LEAVE' | 'LEAVE' | 'ABSENT'
   statusText: string
   remark?: string
@@ -104,6 +118,7 @@ export type AcademicWarning = {
   id: number
   teachingClassName: string
   courseName: string
+  studentNo: string
   studentName: string
   warningLevel: 'LOW' | 'MEDIUM' | 'HIGH'
   warningLevelText: string
@@ -159,6 +174,7 @@ export type AnnouncementPayload = {
 export type ScheduleItem = {
   id: number
   teachingClassId: number
+  semesterName: string
   className: string
   courseName: string
   teacherName: string
@@ -214,6 +230,12 @@ export type AdminUser = {
   userType: User['userType']
   status: number
   roles: string[]
+  entryYear?: number
+  collegeId?: number
+  collegeName?: string
+  department?: string
+  title?: string
+  teacherNo?: string
 }
 
 export type AdminUserPayload = {
@@ -223,6 +245,10 @@ export type AdminUserPayload = {
   status: number
   roleIds: number[]
   password?: string
+  entryYear?: number
+  collegeId?: number
+  department?: string
+  title?: string
 }
 
 export type PasswordResetPayload = {
@@ -251,8 +277,57 @@ export type ProfileSecurity = {
   userType: User['userType']
   email?: string
   wechatBound: boolean
-  campusIdentity?: string
+  collegeName?: string
+  majorName?: string
+  className?: string
+  studentNo?: string
+  teacherNo?: string
+  title?: string
+  department?: string
   lastLoginTime?: string
+}
+
+export type College = {
+  id: number
+  code: string
+  name: string
+  shortName?: string
+  teacherCode?: string
+  foundedYear?: number
+}
+
+export type Major = {
+  id: number
+  collegeId: number
+  collegeName: string
+  code: string
+  name: string
+}
+
+export type AdminClass = {
+  id: number
+  majorId: number
+  collegeName: string
+  majorName: string
+  className: string
+  gradeYear: number
+  classNo: number
+}
+
+export type CalendarDay = {
+  date: string
+  weekNo?: number
+  monthLabel?: string
+  dayText: string
+  eventName?: string
+  dayType: 'NORMAL' | 'WEEKEND' | 'HOLIDAY' | 'EXAM' | 'ADJUST'
+}
+
+export type AcademicCalendar = {
+  academicYear: string
+  term: number
+  yearLabel: number
+  days: CalendarDay[]
 }
 
 export type AdminStats = {

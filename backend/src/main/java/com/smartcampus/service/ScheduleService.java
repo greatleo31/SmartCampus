@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -20,41 +21,57 @@ public class ScheduleService {
     private final ClassScheduleMapper scheduleMapper;
     private final TeachingClassMapper teachingClassMapper;
     private final TeachingClassStudentMapper enrollmentMapper;
+    private final StudentProfileMapper studentProfileMapper;
     private final CourseMapper courseMapper;
+    private final SemesterMapper semesterMapper;
     private final TeacherProfileMapper teacherProfileMapper;
     private final SysUserMapper userMapper;
 
     public List<ScheduleItemVO> mySchedules() {
         CurrentUser user = SecurityUtils.currentUser();
         if (user.isAdmin()) {
-            return toVO(scheduleMapper.selectList(new LambdaQueryWrapper<ClassSchedule>()
-                    .orderByAsc(ClassSchedule::getDayOfWeek)
-                    .orderByAsc(ClassSchedule::getStartSection)));
+            return loadSchedulesByClassIds(null);
         }
         if (user.isTeacher()) {
             Long teacherId = accessService.currentTeacherId();
             List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
                             .eq(TeachingClass::getTeacherId, teacherId))
                     .stream().map(TeachingClass::getId).toList();
-            if (classIds.isEmpty()) {
-                return List.of();
-            }
-            return toVO(scheduleMapper.selectList(new LambdaQueryWrapper<ClassSchedule>()
-                    .in(ClassSchedule::getTeachingClassId, classIds)
-                    .orderByAsc(ClassSchedule::getDayOfWeek)
-                    .orderByAsc(ClassSchedule::getStartSection)));
+            return loadSchedulesByClassIds(classIds);
         }
         Long studentId = accessService.currentStudentId();
         List<Long> classIds = enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
                         .eq(TeachingClassStudent::getStudentId, studentId))
                 .stream().map(TeachingClassStudent::getTeachingClassId).toList();
-        if (classIds.isEmpty()) {
+        return loadSchedulesByClassIds(classIds);
+    }
+
+    public List<ScheduleItemVO> classSchedules() {
+        CurrentUser user = SecurityUtils.currentUser();
+        if (!user.isStudent()) {
+            return mySchedules();
+        }
+        StudentProfile current = studentProfileMapper.selectById(accessService.currentStudentId());
+        if (current == null || current.getAdminClassId() == null) {
             return List.of();
         }
-        return toVO(scheduleMapper.selectList(new LambdaQueryWrapper<ClassSchedule>()
-                .in(ClassSchedule::getTeachingClassId, classIds)
-                .orderByAsc(ClassSchedule::getDayOfWeek)
-                .orderByAsc(ClassSchedule::getStartSection)));
+        List<Long> studentIds = studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
+                        .eq(StudentProfile::getAdminClassId, current.getAdminClassId()))
+                .stream()
+                .map(StudentProfile::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (studentIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> classIds = enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
+                        .in(TeachingClassStudent::getStudentId, studentIds))
+                .stream()
+                .map(TeachingClassStudent::getTeachingClassId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        return loadSchedulesByClassIds(classIds);
     }
 
     public List<ScheduleItemVO> all() {
@@ -98,15 +115,30 @@ public class ScheduleService {
         return schedule;
     }
 
+    private List<ScheduleItemVO> loadSchedulesByClassIds(List<Long> classIds) {
+        LambdaQueryWrapper<ClassSchedule> wrapper = new LambdaQueryWrapper<ClassSchedule>()
+                .orderByAsc(ClassSchedule::getDayOfWeek)
+                .orderByAsc(ClassSchedule::getStartSection);
+        if (classIds != null) {
+            if (classIds.isEmpty()) {
+                return List.of();
+            }
+            wrapper.in(ClassSchedule::getTeachingClassId, classIds);
+        }
+        return toVO(scheduleMapper.selectList(wrapper));
+    }
+
     private List<ScheduleItemVO> toVO(List<ClassSchedule> schedules) {
         return schedules.stream().map(schedule -> {
             TeachingClass teachingClass = teachingClassMapper.selectById(schedule.getTeachingClassId());
             Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
+            Semester semester = teachingClass == null ? null : semesterMapper.selectById(teachingClass.getSemesterId());
             TeacherProfile teacher = teachingClass == null ? null : teacherProfileMapper.selectById(teachingClass.getTeacherId());
             SysUser teacherUser = teacher == null ? null : userMapper.selectById(teacher.getUserId());
             return new ScheduleItemVO(
                     schedule.getId(),
                     schedule.getTeachingClassId(),
+                    semester == null ? "-" : semester.getName(),
                     teachingClass == null ? "-" : teachingClass.getClassName(),
                     course == null ? "-" : course.getName(),
                     teacherUser == null ? "-" : teacherUser.getRealName(),

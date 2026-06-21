@@ -12,6 +12,10 @@ public record UserAdminRequest(
         @NotBlank String userType,
         @NotNull Integer status,
         @NotEmpty List<Long> roleIds,
-        String password
+        String password,
+        Integer entryYear,
+        Long collegeId,
+        String department,
+        String title
 ) {
 }

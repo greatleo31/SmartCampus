@@ -25,6 +25,8 @@ public class AdminService {
     private final AnnouncementMapper announcementMapper;
     private final ClassScheduleMapper scheduleMapper;
     private final AcademicWarningMapper warningMapper;
+    private final TeacherProfileMapper teacherProfileMapper;
+    private final CollegeMapper collegeMapper;
     private final PasswordEncoder passwordEncoder;
 
     public AdminStatsVO stats() {
@@ -62,6 +64,7 @@ public class AdminService {
         } else {
             userMapper.updateById(user);
         }
+        syncProfiles(user, request);
         assignRoles(user.getId(), request.roleIds());
         return user;
     }
@@ -175,6 +178,96 @@ public class AdminService {
                 .stream().map(SysUserRole::getRoleId).toList();
         List<String> roles = roleIds.isEmpty() ? List.of() : roleMapper.selectBatchIds(roleIds)
                 .stream().map(SysRole::getCode).toList();
-        return new AdminUserVO(user.getId(), user.getUsername(), user.getRealName(), user.getUserType(), user.getStatus(), roles);
+        TeacherProfile teacher = teacherProfileMapper.selectOne(new LambdaQueryWrapper<TeacherProfile>()
+                .eq(TeacherProfile::getUserId, user.getId())
+                .last("limit 1"));
+        boolean isTeacher = "TEACHER".equals(user.getUserType());
+        College college = !isTeacher || teacher == null || teacher.getCollegeId() == null ? null : collegeMapper.selectById(teacher.getCollegeId());
+        return new AdminUserVO(
+                user.getId(),
+                user.getUsername(),
+                user.getRealName(),
+                user.getUserType(),
+                user.getStatus(),
+                roles,
+                resolveEntryYear(teacher),
+                isTeacher && teacher != null ? teacher.getCollegeId() : null,
+                college == null ? null : college.getName(),
+                isTeacher && teacher != null ? teacher.getDepartment() : null,
+                isTeacher && teacher != null ? teacher.getTitle() : null,
+                isTeacher && teacher != null ? teacher.getTeacherNo() : null
+        );
+    }
+
+    private void syncProfiles(SysUser user, UserAdminRequest request) {
+        if ("TEACHER".equals(request.userType())) {
+            upsertTeacherProfile(user, request);
+        }
+    }
+
+    private void upsertTeacherProfile(SysUser user, UserAdminRequest request) {
+        if (request.collegeId() == null) {
+            throw new BizException(400, "教师必须选择学院");
+        }
+        College college = collegeMapper.selectById(request.collegeId());
+        if (college == null) {
+            throw new BizException(404, "学院不存在");
+        }
+        if (request.entryYear() == null || request.entryYear() < 1900 || request.entryYear() > 9999) {
+            throw new BizException(400, "教师必须填写正确的入职年份");
+        }
+        if (request.department() == null || request.department().isBlank()) {
+            throw new BizException(400, "教师必须填写部门");
+        }
+        TeacherProfile teacher = teacherProfileMapper.selectOne(new LambdaQueryWrapper<TeacherProfile>()
+                .eq(TeacherProfile::getUserId, user.getId())
+                .last("limit 1"));
+        if (teacher == null) {
+            teacher = new TeacherProfile();
+            teacher.setUserId(user.getId());
+            teacher.setTeacherNo(nextTeacherNo(college, request.entryYear()));
+            teacherProfileMapper.insert(fillTeacherProfile(teacher, request));
+            return;
+        }
+        teacherProfileMapper.updateById(fillTeacherProfile(teacher, request));
+    }
+
+    private TeacherProfile fillTeacherProfile(TeacherProfile teacher, UserAdminRequest request) {
+        teacher.setCollegeId(request.collegeId());
+        teacher.setDepartment(request.department() == null ? "" : request.department().trim());
+        teacher.setTitle(request.title());
+        return teacher;
+    }
+
+    private String nextTeacherNo(College college, Integer entryYear) {
+        String year = String.valueOf(entryYear);
+        String collegeCode = college.getTeacherCode();
+        long sequence = teacherProfileMapper.selectList(new LambdaQueryWrapper<TeacherProfile>()
+                        .likeRight(TeacherProfile::getTeacherNo, year + collegeCode))
+                .stream()
+                .map(TeacherProfile::getTeacherNo)
+                .filter(value -> value != null && value.length() >= 10)
+                .map(value -> value.substring(value.length() - 4))
+                .mapToLong(value -> {
+                    try {
+                        return Long.parseLong(value);
+                    } catch (NumberFormatException ex) {
+                        return 0L;
+                    }
+                })
+                .max()
+                .orElse(0L) + 1;
+        return year + collegeCode + String.format("%04d", sequence);
+    }
+
+    private Integer resolveEntryYear(TeacherProfile teacher) {
+        if (teacher == null || teacher.getTeacherNo() == null || teacher.getTeacherNo().length() < 4) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(teacher.getTeacherNo().substring(0, 4));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 }

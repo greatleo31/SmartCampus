@@ -14,6 +14,8 @@ public class StudentProfile extends BaseEntity {
     private Long id;
     private Long userId;
     private String studentNo;
+    private Long majorId;
+    private Long adminClassId;
     private String major;
     private String className;
     private Integer gradeYear;

@@ -14,6 +14,7 @@ public class TeacherProfile extends BaseEntity {
     private Long id;
     private Long userId;
     private String teacherNo;
+    private Long collegeId;
     private String department;
     private String title;
 }

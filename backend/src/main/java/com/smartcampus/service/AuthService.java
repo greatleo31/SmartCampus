@@ -22,8 +22,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -53,14 +56,17 @@ public class AuthService {
 
     public List<MenuVO> menus() {
         CurrentUser currentUser = SecurityUtils.currentUser();
-        return permissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
+        List<MenuVO> menus = permissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
                         .in(SysPermission::getRoleCode, currentUser.roles())
                         .isNotNull(SysPermission::getMenuPath))
                 .stream()
-                .sorted(Comparator.comparing(SysPermission::getMenuPath))
                 .map(p -> new MenuVO(p.getName(), p.getMenuPath(), p.getCode()))
                 .distinct()
                 .toList();
+        if (currentUser.isStudent()) {
+            return sortStudentMenus(menus);
+        }
+        return menus.stream().sorted(Comparator.comparingInt(menu -> menuOrder(menu.path()))).toList();
     }
 
     private CurrentUser buildCurrentUser(SysUser user) {
@@ -77,5 +83,44 @@ public class AuthService {
 
     private UserVO toUserVO(CurrentUser user) {
         return new UserVO(user.id(), user.username(), user.realName(), user.userType(), user.roles(), user.permissions());
+    }
+
+    private List<MenuVO> sortStudentMenus(List<MenuVO> menus) {
+        List<String> order = List.of("/", "/calendar", "/class-schedule", "/schedule", "/my/courses", "/exams", "/my/grades", "/gpa-ranking", "/makeup-exams");
+        Map<String, MenuVO> byPath = new LinkedHashMap<>();
+        menus.forEach(menu -> byPath.putIfAbsent(menu.path(), menu));
+        List<MenuVO> sorted = new ArrayList<>();
+        for (String path : order) {
+            MenuVO menu = byPath.remove(path);
+            if (menu != null) {
+                sorted.add(menu);
+            }
+        }
+        sorted.addAll(byPath.values().stream()
+                .sorted(Comparator.comparingInt(menu -> menuOrder(menu.path())))
+                .toList());
+        return sorted;
+    }
+
+    private int menuOrder(String path) {
+        return switch (path) {
+            case "/" -> 0;
+            case "/calendar" -> 10;
+            case "/class-schedule" -> 20;
+            case "/schedule" -> 30;
+            case "/my/courses" -> 40;
+            case "/exams" -> 50;
+            case "/my/grades", "/grades" -> 60;
+            case "/gpa-ranking" -> 70;
+            case "/makeup-exams" -> 80;
+            case "/attendance" -> 90;
+            case "/warnings" -> 100;
+            case "/profile" -> 110;
+            case "/semesters" -> 120;
+            case "/courses" -> 130;
+            case "/teaching-classes" -> 140;
+            case "/enrollments" -> 150;
+            default -> 999;
+        };
     }
 }

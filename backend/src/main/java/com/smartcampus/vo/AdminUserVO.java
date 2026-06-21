@@ -8,6 +8,12 @@ public record AdminUserVO(
         String realName,
         String userType,
         Integer status,
-        List<String> roles
+        List<String> roles,
+        Integer entryYear,
+        Long collegeId,
+        String collegeName,
+        String department,
+        String title,
+        String teacherNo
 ) {
 }

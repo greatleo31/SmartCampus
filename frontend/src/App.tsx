@@ -54,14 +54,14 @@ function FrontRoutes() {
       <Route path="/attendance" element={<AttendancePage />} />
       <Route path="/warnings" element={<WarningsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/schedule" element={<SchedulePage />} />
-      <Route path="/class-schedule" element={<SchedulePage title="班级课表查询" />} />
-      <Route path="/my/courses" element={<ReadOnlyPage title="我的选课" endpoint="/api/my/courses" />} />
-      <Route path="/my/grades" element={<ReadOnlyPage title="学生成绩查询" endpoint="/api/my/grades" />} />
+      <Route path="/schedule" element={<SchedulePage title="个人课表" scope="personal" />} />
+      <Route path="/class-schedule" element={<SchedulePage title="班级课表" scope="class" />} />
+      <Route path="/my/courses" element={<ReadOnlyPage title="我的选课" endpoint="/api/my/courses" semesterFilter />} />
+      <Route path="/my/grades" element={<ReadOnlyPage title="成绩查询" endpoint="/api/my/grades" semesterFilter />} />
       <Route path="/calendar" element={<CalendarPage />} />
-      <Route path="/gpa-ranking" element={<ReadOnlyPage title="绩点排名查询" endpoint="/api/gpa-ranking" />} />
-      <Route path="/exams" element={<ReadOnlyPage title="考试安排" endpoint="/api/exams" />} />
-      <Route path="/makeup-exams" element={<ReadOnlyPage title="补考报名" endpoint="/api/makeup-exams" />} />
+      <Route path="/gpa-ranking" element={<ReadOnlyPage title="绩点查询" endpoint="/api/gpa-ranking" semesterFilter />} />
+      <Route path="/exams" element={<ReadOnlyPage title="考试" endpoint="/api/exams" semesterFilter />} />
+      <Route path="/makeup-exams" element={<ReadOnlyPage title="补考" endpoint="/api/makeup-exams" semesterFilter />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

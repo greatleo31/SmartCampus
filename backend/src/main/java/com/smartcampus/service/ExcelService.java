@@ -1,5 +1,6 @@
 package com.smartcampus.service;
 
+import com.smartcampus.common.PageRequest;
 import com.smartcampus.domain.AttendanceRecord;
 import com.smartcampus.domain.GradeRecord;
 import com.smartcampus.domain.StudentProfile;
@@ -12,6 +13,8 @@ import com.smartcampus.mapper.StudentProfileMapper;
 import com.smartcampus.mapper.SysUserMapper;
 import com.smartcampus.mapper.TeachingClassMapper;
 import com.smartcampus.vo.ImportResultVO;
+import com.smartcampus.vo.AttendanceRecordVO;
+import com.smartcampus.vo.GradeRecordVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
@@ -47,23 +50,38 @@ public class ExcelService {
     }
 
     public byte[] exportGrades() {
-        List<List<Object>> rows = teachingService.grades(null, null).stream()
-                .map(item -> List.<Object>of(teachingClassName(item.getTeachingClassId()), studentName(item.getStudentId()), item.getRegularScore(), item.getFinalScore(), item.getTotalScore()))
+        List<List<Object>> rows = teachingService.gradeViews(allRequest(), null, null).records().stream()
+                .map(item -> List.<Object>of(
+                        item.teachingClassName(),
+                        item.courseName(),
+                        item.semesterName(),
+                        item.studentNo(),
+                        item.studentName(),
+                        item.regularScore(),
+                        item.finalScore(),
+                        item.totalScore()))
                 .toList();
-        return workbook("成绩数据", List.of("教学班", "学生", "平时分", "期末分", "总评"), rows);
+        return workbook("成绩数据", List.of("教学班", "课程", "学期", "学号", "姓名", "平时分", "期末分", "总评"), rows);
     }
 
     public byte[] exportAttendance() {
-        List<List<Object>> rows = teachingService.attendance(null, null).stream()
+        List<List<Object>> rows = teachingService.attendanceViews(allRequest(), null, null).records().stream()
                 .map(item -> List.<Object>of(
-                        teachingClassName(item.getTeachingClassId()),
-                        studentName(item.getStudentId()),
-                        item.getAttendanceDate(),
-                        attendanceStatusText(item.getStatus()),
-                        item.getRemark() == null ? "" : item.getRemark()
+                        item.teachingClassName(),
+                        item.courseName(),
+                        item.adminClassName(),
+                        item.studentNo(),
+                        item.studentName(),
+                        item.attendanceDate(),
+                        item.weekLabel(),
+                        item.teacherName(),
+                        item.sectionLabel(),
+                        item.classroom(),
+                        item.statusText(),
+                        item.remark() == null ? "" : item.remark()
                 ))
                 .toList();
-        return workbook("考勤数据", List.of("教学班", "学生", "考勤日期", "状态", "备注"), rows);
+        return workbook("考勤数据", List.of("教学班", "课程", "班级", "学号", "姓名", "考勤日期", "周次", "任课老师", "节次", "教室", "状态", "备注"), rows);
     }
 
     public ImportResultVO importGrades(MultipartFile file) {
@@ -186,7 +204,14 @@ public class ExcelService {
 
     private Long teachingClassId(String className) {
         List<TeachingClass> matches = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                .eq(TeachingClass::getClassName, className));
+                .and(wrapper -> wrapper
+                        .eq(TeachingClass::getClassName, className)
+                        .or()
+                        .eq(TeachingClass::getClassCode, className)
+                        .or()
+                        .like(TeachingClass::getClassName, className)
+                        .or()
+                        .like(TeachingClass::getClassCode, className)));
         if (matches.isEmpty()) {
             throw new BizException(400, "教学班不存在：" + className);
         }
@@ -196,20 +221,29 @@ public class ExcelService {
         return matches.get(0).getId();
     }
 
-    private Long studentId(String realName) {
+    private Long studentId(String value) {
+        StudentProfile matchedProfile = studentProfileMapper.selectOne(new LambdaQueryWrapper<StudentProfile>()
+                .eq(StudentProfile::getStudentNo, value)
+                .last("limit 1"));
+        if (matchedProfile != null) {
+            return matchedProfile.getId();
+        }
         List<SysUser> users = userMapper.selectList(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getRealName, realName)
+                .and(wrapper -> wrapper
+                        .eq(SysUser::getRealName, value)
+                        .or()
+                        .like(SysUser::getRealName, value))
                 .eq(SysUser::getUserType, "STUDENT"));
         if (users.isEmpty()) {
-            throw new BizException(400, "学生不存在：" + realName);
+            throw new BizException(400, "学生不存在：" + value);
         }
         if (users.size() > 1) {
-            throw new BizException(400, "学生姓名不唯一：" + realName);
+            throw new BizException(400, "学生匹配结果不唯一：" + value);
         }
         StudentProfile profile = studentProfileMapper.selectOne(new LambdaQueryWrapper<StudentProfile>()
                 .eq(StudentProfile::getUserId, users.get(0).getId()));
         if (profile == null) {
-            throw new BizException(400, "学生档案不存在：" + realName);
+            throw new BizException(400, "学生档案不存在：" + value);
         }
         return profile.getId();
     }
@@ -282,5 +316,9 @@ public class ExcelService {
             case "ABSENT" -> "旷课";
             default -> status;
         };
+    }
+
+    private PageRequest allRequest() {
+        return new PageRequest(1, Integer.MAX_VALUE, null, null, null);
     }
 }

@@ -6,6 +6,7 @@ public record AcademicWarningVO(
         Long id,
         String teachingClassName,
         String courseName,
+        String studentNo,
         String studentName,
         String warningLevel,
         String warningLevelText,

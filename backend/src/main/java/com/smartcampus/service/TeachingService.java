@@ -23,7 +23,11 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +44,10 @@ public class TeachingService {
     private final CourseMapper courseMapper;
     private final SemesterMapper semesterMapper;
     private final SysUserMapper userMapper;
+    private final CollegeMapper collegeMapper;
+    private final MajorMapper majorMapper;
+    private final AdminClassMapper adminClassMapper;
+    private final ClassScheduleMapper classScheduleMapper;
 
     public PageResult<TeachingClassVO> teachingClasses(PageRequest request) {
         CurrentUser user = SecurityUtils.currentUser();
@@ -49,6 +57,7 @@ public class TeachingService {
                         .or()
                         .like(TeachingClass::getClassCode, request.keyword()))
                 .orderByDesc(TeachingClass::getId);
+        applySemesterFilter(wrapper, request);
         if (user.isTeacher()) {
             wrapper.eq(TeachingClass::getTeacherId, accessService.currentTeacherId());
         } else if (user.isStudent()) {
@@ -131,9 +140,13 @@ public class TeachingService {
     public List<EnrollmentVO> enrollments(Long teachingClassId) {
         accessService.assertClassScope(teachingClassId);
         return enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
-                .eq(TeachingClassStudent::getTeachingClassId, teachingClassId)
-                .orderByDesc(TeachingClassStudent::getId))
-                .stream().map(this::toEnrollmentVO).toList();
+                .eq(TeachingClassStudent::getTeachingClassId, teachingClassId))
+                .stream()
+                .map(this::toEnrollmentVO)
+                .sorted(Comparator
+                        .comparing(EnrollmentVO::studentNo, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(EnrollmentVO::studentName, Comparator.nullsLast(String::compareTo)))
+                .toList();
     }
 
     public void deleteEnrollment(Long id) {
@@ -176,8 +189,17 @@ public class TeachingService {
         return gradeMapper.selectList(wrapper);
     }
 
-    public List<GradeRecordVO> gradeViews(Long teachingClassId, Long studentId) {
-        return grades(teachingClassId, studentId).stream().map(this::toGradeVO).toList();
+    public PageResult<GradeRecordVO> gradeViews(PageRequest request, Long teachingClassId, Long studentId) {
+        List<GradeRecordVO> rows = grades(teachingClassId, studentId).stream()
+                .map(this::toGradeVO)
+                .filter(item -> matchesSemester(item.semesterName(), request))
+                .filter(item -> !StringUtils.hasText(request.keyword()) || containsAny(request.keyword(), item.courseName(), item.teachingClassName(), item.studentName(), item.studentNo(), item.semesterName()))
+                .sorted(Comparator
+                        .comparing(GradeRecordVO::studentNo, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(GradeRecordVO::semesterName, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(GradeRecordVO::courseName, Comparator.nullsLast(String::compareTo)))
+                .toList();
+        return paginate(rows, request);
     }
 
     public void deleteGrade(Long id) {
@@ -222,15 +244,22 @@ public class TeachingService {
                 .eq(teachingClassId != null, AttendanceRecord::getTeachingClassId, teachingClassId)
                 .eq(studentId != null, AttendanceRecord::getStudentId, studentId)
                 .orderByDesc(AttendanceRecord::getAttendanceDate);
-        if (SecurityUtils.currentUser().isTeacher()) {
-            wrapper.ne(AttendanceRecord::getStatus, "NORMAL");
-        }
         applyAttendanceScope(wrapper);
         return attendanceMapper.selectList(wrapper);
     }
 
-    public List<AttendanceRecordVO> attendanceViews(Long teachingClassId, Long studentId) {
-        return attendance(teachingClassId, studentId).stream().map(this::toAttendanceVO).toList();
+    public PageResult<AttendanceRecordVO> attendanceViews(PageRequest request, Long teachingClassId, Long studentId) {
+        List<AttendanceRecordVO> rows = attendance(teachingClassId, studentId).stream()
+                .map(this::toAttendanceVO)
+                .filter(item -> matchesSemester(item.semesterName(), request))
+                .filter(item -> !StringUtils.hasText(request.keyword()) || containsAny(request.keyword(), item.adminClassName(), item.studentNo(), item.studentName(), item.courseName(), item.teachingClassName(), item.teacherName(), item.classroom()))
+                .sorted(Comparator
+                        .comparing(AttendanceRecordVO::adminClassName, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(AttendanceRecordVO::studentNo, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(AttendanceRecordVO::attendanceDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(AttendanceRecordVO::teachingClassName, Comparator.nullsLast(String::compareTo)))
+                .toList();
+        return paginate(rows, request);
     }
 
     public void deleteAttendance(Long id) {
@@ -312,7 +341,13 @@ public class TeachingService {
     }
 
     public List<AcademicWarningVO> warningViews(Long studentId) {
-        return warnings(studentId).stream().map(this::toWarningVO).toList();
+        return warnings(studentId).stream()
+                .map(this::toWarningVO)
+                .sorted(Comparator
+                        .comparing(AcademicWarningVO::studentNo, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(AcademicWarningVO::courseName, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(AcademicWarningVO::teachingClassName, Comparator.nullsLast(String::compareTo)))
+                .toList();
     }
 
     public DashboardVO dashboard() {
@@ -410,9 +445,30 @@ public class TeachingService {
             }
         }
         List<Long> scopedClassIds = classIds;
+        LambdaQueryWrapper<AttendanceRecord> latestWrapper = new LambdaQueryWrapper<AttendanceRecord>()
+                .orderByDesc(AttendanceRecord::getAttendanceDate)
+                .last("limit 1");
+        if (user.isTeacher()) {
+            latestWrapper.in(AttendanceRecord::getTeachingClassId, scopedClassIds);
+        }
+        AttendanceRecord latest = attendanceMapper.selectOne(latestWrapper);
+        LambdaQueryWrapper<AcademicWarning> latestWarningWrapper = new LambdaQueryWrapper<AcademicWarning>()
+                .orderByDesc(AcademicWarning::getGeneratedTime)
+                .last("limit 1");
+        if (user.isTeacher()) {
+            latestWarningWrapper.in(AcademicWarning::getTeachingClassId, scopedClassIds);
+        }
+        AcademicWarning latestWarning = warningMapper.selectOne(latestWarningWrapper);
+        LocalDate latestAttendanceDate = latest == null ? null : latest.getAttendanceDate();
+        LocalDate latestWarningDate = latestWarning == null ? null : latestWarning.getGeneratedTime().toLocalDate();
+        LocalDate anchor = latestAttendanceDate == null ? latestWarningDate : latestWarningDate == null || latestAttendanceDate.isAfter(latestWarningDate) ? latestAttendanceDate : latestWarningDate;
+        if (anchor == null) {
+            anchor = LocalDate.now();
+        }
+        LocalDate finalAnchor = anchor;
         return java.util.stream.IntStream.rangeClosed(0, 6)
                 .mapToObj(offset -> {
-                    LocalDate day = LocalDate.now().minusDays(6L - offset);
+                    LocalDate day = finalAnchor.minusDays(6L - offset);
                     LambdaQueryWrapper<AttendanceRecord> attendance = new LambdaQueryWrapper<AttendanceRecord>()
                             .eq(AttendanceRecord::getAttendanceDate, day)
                             .in(AttendanceRecord::getStatus, List.of("LATE", "EARLY_LEAVE", "ABSENT"));
@@ -522,10 +578,12 @@ public class TeachingService {
 
     private TeacherProfileVO toTeacherProfileVO(TeacherProfile teacher) {
         SysUser user = teacher == null ? null : userMapper.selectById(teacher.getUserId());
+        College college = teacher == null || teacher.getCollegeId() == null ? null : collegeMapper.selectById(teacher.getCollegeId());
         return new TeacherProfileVO(
                 teacher == null ? null : teacher.getId(),
                 teacher == null ? "-" : teacher.getTeacherNo(),
                 user == null ? "-" : user.getRealName(),
+                college == null ? "-" : college.getName(),
                 teacher == null ? "-" : teacher.getDepartment(),
                 teacher == null ? "-" : teacher.getTitle()
         );
@@ -533,12 +591,16 @@ public class TeachingService {
 
     private StudentProfileVO toStudentProfileVO(StudentProfile student) {
         SysUser user = student == null ? null : userMapper.selectById(student.getUserId());
+        Major major = student == null || student.getMajorId() == null ? null : majorMapper.selectById(student.getMajorId());
+        AdminClass adminClass = student == null || student.getAdminClassId() == null ? null : adminClassMapper.selectById(student.getAdminClassId());
+        College college = major == null ? null : collegeMapper.selectById(major.getCollegeId());
         return new StudentProfileVO(
                 student == null ? null : student.getId(),
                 student == null ? "-" : student.getStudentNo(),
                 user == null ? "-" : user.getRealName(),
-                student == null ? "-" : student.getMajor(),
-                student == null ? "-" : student.getClassName(),
+                college == null ? "-" : college.getName(),
+                major == null ? student == null ? "-" : student.getMajor() : major.getName(),
+                adminClass == null ? student == null ? "-" : student.getClassName() : adminClass.getClassName(),
                 student == null ? null : student.getGradeYear()
         );
     }
@@ -560,12 +622,15 @@ public class TeachingService {
     private GradeRecordVO toGradeVO(GradeRecord record) {
         TeachingClass teachingClass = teachingClassMapper.selectById(record.getTeachingClassId());
         Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
+        Semester semester = teachingClass == null ? null : semesterMapper.selectById(teachingClass.getSemesterId());
         StudentProfile student = studentProfileMapper.selectById(record.getStudentId());
         SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
         return new GradeRecordVO(
                 record.getId(),
+                semester == null ? "-" : semester.getName(),
                 teachingClass == null ? "-" : teachingClass.getClassName(),
                 course == null ? "-" : course.getName(),
+                student == null ? "-" : student.getStudentNo(),
                 studentUser == null ? "-" : studentUser.getRealName(),
                 record.getRegularScore(),
                 record.getFinalScore(),
@@ -576,14 +641,33 @@ public class TeachingService {
     private AttendanceRecordVO toAttendanceVO(AttendanceRecord record) {
         TeachingClass teachingClass = teachingClassMapper.selectById(record.getTeachingClassId());
         Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
+        Semester semester = teachingClass == null ? null : semesterMapper.selectById(teachingClass.getSemesterId());
+        TeacherProfile teacher = teachingClass == null ? null : teacherProfileMapper.selectById(teachingClass.getTeacherId());
+        SysUser teacherUser = teacher == null ? null : userMapper.selectById(teacher.getUserId());
         StudentProfile student = studentProfileMapper.selectById(record.getStudentId());
         SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
+        AdminClass adminClass = student == null || student.getAdminClassId() == null ? null : adminClassMapper.selectById(student.getAdminClassId());
+        Integer weekNo = semester == null ? null : resolveWeekNo(semester, record.getAttendanceDate());
+        List<ClassSchedule> schedules = classScheduleMapper.selectList(new LambdaQueryWrapper<ClassSchedule>()
+                .eq(ClassSchedule::getTeachingClassId, record.getTeachingClassId()))
+                .stream()
+                .filter(item -> item.getDayOfWeek() != null && item.getDayOfWeek().equals(record.getAttendanceDate().getDayOfWeek().getValue()))
+                .filter(item -> weekNo == null || (item.getStartWeek() != null && item.getEndWeek() != null && weekNo >= item.getStartWeek() && weekNo <= item.getEndWeek()))
+                .sorted(Comparator.comparing(ClassSchedule::getStartSection))
+                .toList();
         return new AttendanceRecordVO(
                 record.getId(),
-                teachingClass == null ? "-" : teachingClass.getClassName(),
-                course == null ? "-" : course.getName(),
+                adminClass == null ? student == null ? "-" : student.getClassName() : adminClass.getClassName(),
+                student == null ? "-" : student.getStudentNo(),
                 studentUser == null ? "-" : studentUser.getRealName(),
+                course == null ? "-" : course.getName(),
+                semester == null ? "-" : semester.getName(),
+                teachingClass == null ? "-" : teachingClass.getClassName(),
                 record.getAttendanceDate(),
+                weekNo == null ? "-" : "第" + weekNo + "周",
+                teacherUser == null ? "-" : teacherUser.getRealName(),
+                joinSections(schedules),
+                joinClassrooms(schedules),
                 record.getStatus(),
                 attendanceStatusText(record.getStatus()),
                 record.getRemark()
@@ -600,6 +684,7 @@ public class TeachingService {
                 warning.getId(),
                 teachingClass == null ? "-" : teachingClass.getClassName(),
                 course == null ? "-" : course.getName(),
+                student == null ? "-" : student.getStudentNo(),
                 studentUser == null ? "-" : studentUser.getRealName(),
                 warning.getWarningLevel(),
                 warningLevelText(warning.getWarningLevel()),
@@ -640,6 +725,78 @@ public class TeachingService {
             case "HIGH" -> "高风险";
             default -> level;
         };
+    }
+
+    private <T> PageResult<T> paginate(List<T> rows, PageRequest request) {
+        long size = request.size() <= 0 ? 10 : request.size();
+        long page = request.page() <= 0 ? 1 : request.page();
+        int from = (int) Math.min(rows.size(), (page - 1) * size);
+        int to = (int) Math.min(rows.size(), from + size);
+        return new PageResult<>(rows.size(), page, size, rows.subList(from, to));
+    }
+
+    private boolean containsAny(String keyword, String... values) {
+        String normalized = keyword == null ? "" : keyword.trim().toLowerCase();
+        if (normalized.isEmpty()) {
+            return true;
+        }
+        for (String value : values) {
+            if (value != null && value.toLowerCase().contains(normalized)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesSemester(String semesterName, PageRequest request) {
+        if (!StringUtils.hasText(request.academicYear()) || request.term() == null) {
+            return true;
+        }
+        return (request.academicYear() + "-" + request.term()).equals(semesterName);
+    }
+
+    private void applySemesterFilter(LambdaQueryWrapper<TeachingClass> wrapper, PageRequest request) {
+        if (!StringUtils.hasText(request.academicYear()) || request.term() == null) {
+            return;
+        }
+        String semesterName = request.academicYear() + "-" + request.term();
+        List<Long> semesterIds = semesterMapper.selectList(new LambdaQueryWrapper<Semester>()
+                        .eq(Semester::getName, semesterName))
+                .stream()
+                .map(Semester::getId)
+                .toList();
+        if (semesterIds.isEmpty()) {
+            wrapper.eq(TeachingClass::getSemesterId, -1L);
+            return;
+        }
+        wrapper.in(TeachingClass::getSemesterId, semesterIds);
+    }
+
+    private Integer resolveWeekNo(Semester semester, LocalDate attendanceDate) {
+        if (semester.getStartDate() == null || attendanceDate == null || attendanceDate.isBefore(semester.getStartDate()) || attendanceDate.isAfter(semester.getEndDate())) {
+            return null;
+        }
+        return (int) ChronoUnit.WEEKS.between(semester.getStartDate(), attendanceDate) + 1;
+    }
+
+    private String joinSections(List<ClassSchedule> schedules) {
+        if (schedules.isEmpty()) {
+            return "-";
+        }
+        return schedules.stream()
+                .map(item -> "第" + item.getStartSection() + "-" + item.getEndSection() + "节")
+                .distinct()
+                .reduce((left, right) -> left + "、" + right)
+                .orElse("-");
+    }
+
+    private String joinClassrooms(List<ClassSchedule> schedules) {
+        if (schedules.isEmpty()) {
+            return "-";
+        }
+        Set<String> classrooms = new LinkedHashSet<>();
+        schedules.stream().map(ClassSchedule::getClassroom).filter(StringUtils::hasText).forEach(classrooms::add);
+        return classrooms.isEmpty() ? "-" : String.join("、", classrooms);
     }
 
 }

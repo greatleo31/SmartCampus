@@ -7,10 +7,14 @@ import { Card } from '../components/ui/Card'
 import { DataTable } from '../components/ui/DataTable'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { PaginationBar } from '../components/ui/PaginationBar'
 
 export function SemestersPage() {
   const qc = useQueryClient()
-  const { data } = useQuery({ queryKey: ['semesters'], queryFn: campusApi.semesters })
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(1)
+  const [size, setSize] = useState(10)
+  const { data } = useQuery({ queryKey: ['semesters', page, size, keyword], queryFn: () => campusApi.semesters({ page, size, keyword: keyword.trim() || undefined }) })
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: '', startDate: '', endDate: '', currentFlag: 0 })
   const create = useMutation({
@@ -35,6 +39,12 @@ export function SemestersPage() {
         <Button onClick={() => setOpen(true)}><Plus size={16} />新增学期</Button>
       </div>
       <Card className="p-5">
+        <div className="mb-4 max-w-sm">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#556273]">关键词</span>
+            <Input placeholder="搜索学期名称" value={keyword} onChange={(e) => { setKeyword(e.target.value); setPage(1) }} />
+          </label>
+        </div>
         <DataTable
           rows={(data?.records ?? []) as unknown as Record<string, unknown>[]}
           columns={[
@@ -45,6 +55,7 @@ export function SemestersPage() {
             { key: 'id', title: '操作', render: (row) => <Button variant="danger" onClick={() => window.confirm('确认删除该学期？') && remove.mutate(Number(row.id))}>删除</Button> },
           ]}
         />
+        <PaginationBar total={data?.total ?? 0} page={data?.page ?? page} size={data?.size ?? size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
       </Card>
       <Modal open={open} title="新增学期" onClose={() => setOpen(false)}>
         <form className="grid gap-4 md:grid-cols-2" onSubmit={submit}>

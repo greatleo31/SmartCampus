@@ -9,7 +9,13 @@ public record ProfileSecurityVO(
         String userType,
         String email,
         Boolean wechatBound,
-        String campusIdentity,
+        String collegeName,
+        String majorName,
+        String className,
+        String studentNo,
+        String teacherNo,
+        String title,
+        String department,
         LocalDateTime lastLoginTime
 ) {
 }
