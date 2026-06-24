@@ -156,6 +156,7 @@ public class CatalogService {
     }
 
     public Course saveCourse(Long id, CourseRequest request) {
+        // 提前校验学院存在，避免写入时触发外键约束异常
         if (request.collegeId() != null && collegeMapper.selectById(request.collegeId()) == null) {
             throw new BizException(404, "学院不存在");
         }

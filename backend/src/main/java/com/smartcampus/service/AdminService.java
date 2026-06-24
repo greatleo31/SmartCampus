@@ -108,6 +108,7 @@ public class AdminService {
     }
 
     public SysPermission savePermission(Long id, PermissionRequest request) {
+        // 提前校验角色存在，避免写入时触发外键约束异常
         if (roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getCode, request.roleCode())) == null) {
             throw new BizException(404, "角色不存在");
         }

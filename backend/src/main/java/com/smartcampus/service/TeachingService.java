@@ -70,7 +70,7 @@ public class TeachingService {
         } else if (user.isStudent()) {
             Long studentId = accessService.currentStudentId();
             List<Long> classIds = enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
-                            .eq(TeachingClassStudent::getStudentId, studentId))
+                    .eq(TeachingClassStudent::getStudentId, studentId))
                     .stream().map(TeachingClassStudent::getTeachingClassId).toList();
             if (classIds.isEmpty()) {
                 return new PageResult<>(0, request.page(), request.size(), List.of());
@@ -78,24 +78,25 @@ public class TeachingService {
             wrapper.in(TeachingClass::getId, classIds);
         }
         Page<TeachingClass> page = teachingClassMapper.selectPage(new Page<>(request.page(), request.size()), wrapper);
-        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords().stream().map(this::toTeachingClassVO).toList());
+        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(),
+                page.getRecords().stream().map(this::toTeachingClassVO).toList());
     }
 
     public List<TeacherProfileVO> teachers() {
-        return localCacheService.longTtl(localCacheService.key("teaching:teachers"), () ->
-                teacherProfileMapper.selectList(new LambdaQueryWrapper<TeacherProfile>()
-                                .orderByAsc(TeacherProfile::getTeacherNo))
+        return localCacheService.longTtl(localCacheService.key("teaching:teachers"),
+                () -> teacherProfileMapper.selectList(new LambdaQueryWrapper<TeacherProfile>()
+                        .orderByAsc(TeacherProfile::getTeacherNo))
                         .stream()
                         .map(this::toTeacherProfileVO)
                         .toList());
     }
 
     public List<StudentProfileVO> students() {
-        return localCacheService.longTtl(localCacheService.key("teaching:students"), () ->
-                studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
-                                .orderByAsc(StudentProfile::getGradeYear)
-                                .orderByAsc(StudentProfile::getClassName)
-                                .orderByAsc(StudentProfile::getStudentNo))
+        return localCacheService.longTtl(localCacheService.key("teaching:students"),
+                () -> studentProfileMapper.selectList(new LambdaQueryWrapper<StudentProfile>()
+                        .orderByAsc(StudentProfile::getGradeYear)
+                        .orderByAsc(StudentProfile::getClassName)
+                        .orderByAsc(StudentProfile::getStudentNo))
                         .stream()
                         .map(this::toStudentProfileVO)
                         .toList());
@@ -104,9 +105,11 @@ public class TeachingService {
     public TeachingClass saveTeachingClass(Long id, TeachingClassRequest request) {
         catalogService.requireSemester(request.semesterId());
         catalogService.requireCourse(request.courseId());
+        // 若 id不存在
         if (teacherProfileMapper.selectById(request.teacherId()) == null) {
             throw new BizException(404, "教师不存在");
         }
+        // 否则存在id或者为null，则执行以下代码
         TeachingClass teachingClass = id == null ? new TeachingClass() : accessService.requireTeachingClass(id);
         teachingClass.setClassCode(request.classCode());
         teachingClass.setClassName(request.className());
@@ -206,12 +209,15 @@ public class TeachingService {
     public PageResult<GradeRecordVO> gradeViews(PageRequest request, Long teachingClassId, Long studentId) {
         CurrentUser user = SecurityUtils.currentUser();
         return localCacheService.normalTtl(
-                localCacheService.key("teaching:grades", user.id(), user.userType(), user.roles(), request, teachingClassId, studentId),
+                localCacheService.key("teaching:grades", user.id(), user.userType(), user.roles(), request,
+                        teachingClassId, studentId),
                 () -> {
                     List<GradeRecordVO> rows = grades(teachingClassId, studentId).stream()
                             .map(this::toGradeVO)
                             .filter(item -> matchesSemester(item.semesterName(), request))
-                            .filter(item -> !StringUtils.hasText(request.keyword()) || containsAny(request.keyword(), item.courseName(), item.teachingClassName(), item.studentName(), item.studentNo(), item.semesterName()))
+                            .filter(item -> !StringUtils.hasText(request.keyword())
+                                    || containsAny(request.keyword(), item.courseName(), item.teachingClassName(),
+                                            item.studentName(), item.studentNo(), item.semesterName()))
                             .sorted(Comparator
                                     .comparing(GradeRecordVO::studentNo, Comparator.nullsLast(String::compareTo))
                                     .thenComparing(GradeRecordVO::semesterName, Comparator.nullsLast(String::compareTo))
@@ -272,11 +278,13 @@ public class TeachingService {
     public PageResult<AttendanceRecordVO> attendanceViews(PageRequest request, Long teachingClassId, Long studentId) {
         CurrentUser user = SecurityUtils.currentUser();
         return localCacheService.normalTtl(
-                localCacheService.key("teaching:attendance", user.id(), user.userType(), user.roles(), request, teachingClassId, studentId),
+                localCacheService.key("teaching:attendance", user.id(), user.userType(), user.roles(), request,
+                        teachingClassId, studentId),
                 () -> loadAttendanceViews(request, teachingClassId, studentId));
     }
 
-    private PageResult<AttendanceRecordVO> loadAttendanceViews(PageRequest request, Long teachingClassId, Long studentId) {
+    private PageResult<AttendanceRecordVO> loadAttendanceViews(PageRequest request, Long teachingClassId,
+            Long studentId) {
         if (StringUtils.hasText(request.keyword())) {
             return loadAttendanceViewsWithKeyword(request, teachingClassId, studentId);
         }
@@ -288,18 +296,23 @@ public class TeachingService {
         applyAttendanceScope(wrapper);
         applyAttendanceSemesterFilter(wrapper, request);
         Page<AttendanceRecord> page = attendanceMapper.selectPage(new Page<>(request.page(), request.size()), wrapper);
-        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords().stream().map(this::toAttendanceVO).toList());
+        return new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(),
+                page.getRecords().stream().map(this::toAttendanceVO).toList());
     }
 
-    private PageResult<AttendanceRecordVO> loadAttendanceViewsWithKeyword(PageRequest request, Long teachingClassId, Long studentId) {
+    private PageResult<AttendanceRecordVO> loadAttendanceViewsWithKeyword(PageRequest request, Long teachingClassId,
+            Long studentId) {
         List<AttendanceRecordVO> rows = attendance(teachingClassId, studentId).stream()
                 .map(this::toAttendanceVO)
                 .filter(item -> matchesSemester(item.semesterName(), request))
-                .filter(item -> containsAny(request.keyword(), item.adminClassName(), item.studentNo(), item.studentName(), item.courseName(), item.teachingClassName(), item.teacherName(), item.classroom()))
+                .filter(item -> containsAny(request.keyword(), item.adminClassName(), item.studentNo(),
+                        item.studentName(), item.courseName(), item.teachingClassName(), item.teacherName(),
+                        item.classroom()))
                 .sorted(Comparator
                         .comparing(AttendanceRecordVO::adminClassName, Comparator.nullsLast(String::compareTo))
                         .thenComparing(AttendanceRecordVO::studentNo, Comparator.nullsLast(String::compareTo))
-                        .thenComparing(AttendanceRecordVO::attendanceDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(AttendanceRecordVO::attendanceDate,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(AttendanceRecordVO::teachingClassName, Comparator.nullsLast(String::compareTo)))
                 .toList();
         return paginate(rows, request);
@@ -322,7 +335,8 @@ public class TeachingService {
     @Transactional
     public int recalculateWarnings() {
         CurrentUser user = SecurityUtils.currentUser();
-        List<TeachingClassStudent> enrollments = enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>());
+        List<TeachingClassStudent> enrollments = enrollmentMapper
+                .selectList(new LambdaQueryWrapper<TeachingClassStudent>());
         int generated = 0;
         for (TeachingClassStudent enrollment : enrollments) {
             if (!canSeePair(user, enrollment.getTeachingClassId(), enrollment.getStudentId())) {
@@ -332,7 +346,8 @@ public class TeachingService {
                     .eq(AttendanceRecord::getTeachingClassId, enrollment.getTeachingClassId())
                     .eq(AttendanceRecord::getStudentId, enrollment.getStudentId()));
             long absent = records.stream().filter(r -> "ABSENT".equals(r.getStatus())).count();
-            long lateOrEarly = records.stream().filter(r -> "LATE".equals(r.getStatus()) || "EARLY_LEAVE".equals(r.getStatus())).count();
+            long lateOrEarly = records.stream()
+                    .filter(r -> "LATE".equals(r.getStatus()) || "EARLY_LEAVE".equals(r.getStatus())).count();
             WarningRuleEngine.WarningDecision decision = WarningRuleEngine.evaluate(absent, lateOrEarly);
             if (decision.hasWarning()) {
                 AcademicWarning warning = warningMapper.selectOne(new LambdaQueryWrapper<AcademicWarning>()
@@ -411,7 +426,7 @@ public class TeachingService {
         if (user.isTeacher()) {
             Long teacherId = accessService.currentTeacherId();
             List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                            .eq(TeachingClass::getTeacherId, teacherId))
+                    .eq(TeachingClass::getTeacherId, teacherId))
                     .stream().map(TeachingClass::getId).toList();
             classWrapper.eq(TeachingClass::getTeacherId, teacherId);
             if (classIds.isEmpty()) {
@@ -422,7 +437,7 @@ public class TeachingService {
         } else if (user.isStudent()) {
             Long studentId = accessService.currentStudentId();
             List<Long> classIds = enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
-                            .eq(TeachingClassStudent::getStudentId, studentId))
+                    .eq(TeachingClassStudent::getStudentId, studentId))
                     .stream().map(TeachingClassStudent::getTeachingClassId).toList();
             if (classIds.isEmpty()) {
                 return new DashboardVO(user.userType(), user.realName(), false, 0, 0, 0, 0, List.of(), List.of());
@@ -440,7 +455,7 @@ public class TeachingService {
         if (user.isTeacher()) {
             Long teacherId = accessService.currentTeacherId();
             List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                            .eq(TeachingClass::getTeacherId, teacherId))
+                    .eq(TeachingClass::getTeacherId, teacherId))
                     .stream().map(TeachingClass::getId).toList();
             highRiskWrapper.in(!classIds.isEmpty(), AcademicWarning::getTeachingClassId, classIds);
             highRiskWrapper.eq(classIds.isEmpty(), AcademicWarning::getTeachingClassId, -1L);
@@ -448,7 +463,8 @@ public class TeachingService {
             highRiskWrapper.eq(AcademicWarning::getStudentId, accessService.currentStudentId());
         }
         long highRiskCount = user.isStudent() ? 0 : warningMapper.selectCount(highRiskWrapper);
-        List<AcademicWarning> recent = warningMapper.selectList(warningWrapper.orderByDesc(AcademicWarning::getGeneratedTime).last("limit 8"));
+        List<AcademicWarning> recent = warningMapper
+                .selectList(warningWrapper.orderByDesc(AcademicWarning::getGeneratedTime).last("limit 8"));
         return new DashboardVO(
                 user.userType(),
                 user.realName(),
@@ -458,8 +474,7 @@ public class TeachingService {
                 abnormalCount,
                 highRiskCount,
                 recent,
-                dashboardTrends(user)
-        );
+                dashboardTrends(user));
     }
 
     private void invalidateDashboardCache() {
@@ -480,13 +495,13 @@ public class TeachingService {
         }
         Long teacherId = accessService.currentTeacherId();
         List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                        .eq(TeachingClass::getTeacherId, teacherId))
+                .eq(TeachingClass::getTeacherId, teacherId))
                 .stream().map(TeachingClass::getId).toList();
         if (classIds.isEmpty()) {
             return 0;
         }
         return enrollmentMapper.selectList(new LambdaQueryWrapper<TeachingClassStudent>()
-                        .in(TeachingClassStudent::getTeachingClassId, classIds))
+                .in(TeachingClassStudent::getTeachingClassId, classIds))
                 .stream().map(TeachingClassStudent::getStudentId).distinct().count();
     }
 
@@ -498,7 +513,7 @@ public class TeachingService {
         if (user.isTeacher()) {
             Long teacherId = accessService.currentTeacherId();
             classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                            .eq(TeachingClass::getTeacherId, teacherId))
+                    .eq(TeachingClass::getTeacherId, teacherId))
                     .stream().map(TeachingClass::getId).toList();
             if (classIds.isEmpty()) {
                 return List.of();
@@ -521,7 +536,9 @@ public class TeachingService {
         AcademicWarning latestWarning = warningMapper.selectOne(latestWarningWrapper);
         LocalDate latestAttendanceDate = latest == null ? null : latest.getAttendanceDate();
         LocalDate latestWarningDate = latestWarning == null ? null : latestWarning.getGeneratedTime().toLocalDate();
-        LocalDate anchor = latestAttendanceDate == null ? latestWarningDate : latestWarningDate == null || latestAttendanceDate.isAfter(latestWarningDate) ? latestAttendanceDate : latestWarningDate;
+        LocalDate anchor = latestAttendanceDate == null ? latestWarningDate
+                : latestWarningDate == null || latestAttendanceDate.isAfter(latestWarningDate) ? latestAttendanceDate
+                        : latestWarningDate;
         if (anchor == null) {
             anchor = LocalDate.now();
         }
@@ -547,8 +564,7 @@ public class TeachingService {
                             day.getMonthValue() + "/" + day.getDayOfMonth(),
                             attendanceMapper.selectCount(attendance),
                             warningMapper.selectCount(warning),
-                            attendanceMapper.selectCount(absent)
-                    );
+                            attendanceMapper.selectCount(absent));
                 }).toList();
     }
 
@@ -570,7 +586,8 @@ public class TeachingService {
         if (user.isStudent()) {
             return accessService.currentStudentId().equals(studentId);
         }
-        return user.isTeacher() && accessService.requireTeachingClass(teachingClassId).getTeacherId().equals(accessService.currentTeacherId());
+        return user.isTeacher() && accessService.requireTeachingClass(teachingClassId).getTeacherId()
+                .equals(accessService.currentTeacherId());
     }
 
     private void applyGradeScope(LambdaQueryWrapper<GradeRecord> wrapper) {
@@ -578,7 +595,7 @@ public class TeachingService {
         if (user.isTeacher()) {
             Long teacherId = accessService.currentTeacherId();
             List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                            .eq(TeachingClass::getTeacherId, teacherId))
+                    .eq(TeachingClass::getTeacherId, teacherId))
                     .stream().map(TeachingClass::getId).toList();
             wrapper.in(!classIds.isEmpty(), GradeRecord::getTeachingClassId, classIds);
             wrapper.eq(classIds.isEmpty(), GradeRecord::getTeachingClassId, -1L);
@@ -592,7 +609,7 @@ public class TeachingService {
         if (user.isTeacher()) {
             Long teacherId = accessService.currentTeacherId();
             List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                            .eq(TeachingClass::getTeacherId, teacherId))
+                    .eq(TeachingClass::getTeacherId, teacherId))
                     .stream().map(TeachingClass::getId).toList();
             wrapper.in(!classIds.isEmpty(), AttendanceRecord::getTeachingClassId, classIds);
             wrapper.eq(classIds.isEmpty(), AttendanceRecord::getTeachingClassId, -1L);
@@ -607,7 +624,7 @@ public class TeachingService {
         }
         String semesterName = request.academicYear() + "-" + request.term();
         List<Long> semesterIds = semesterMapper.selectList(new LambdaQueryWrapper<Semester>()
-                        .eq(Semester::getName, semesterName))
+                .eq(Semester::getName, semesterName))
                 .stream()
                 .map(Semester::getId)
                 .toList();
@@ -616,7 +633,7 @@ public class TeachingService {
             return;
         }
         List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                        .in(TeachingClass::getSemesterId, semesterIds))
+                .in(TeachingClass::getSemesterId, semesterIds))
                 .stream()
                 .map(TeachingClass::getId)
                 .toList();
@@ -632,7 +649,7 @@ public class TeachingService {
         if (user.isTeacher()) {
             Long teacherId = accessService.currentTeacherId();
             List<Long> classIds = teachingClassMapper.selectList(new LambdaQueryWrapper<TeachingClass>()
-                            .eq(TeachingClass::getTeacherId, teacherId))
+                    .eq(TeachingClass::getTeacherId, teacherId))
                     .stream().map(TeachingClass::getId).toList();
             wrapper.in(!classIds.isEmpty(), AcademicWarning::getTeachingClassId, classIds);
             wrapper.eq(classIds.isEmpty(), AcademicWarning::getTeachingClassId, -1L);
@@ -662,27 +679,28 @@ public class TeachingService {
                 semester == null ? "-" : semester.getName(),
                 course == null ? "-" : course.getName(),
                 teacherUser == null ? "-" : teacherUser.getRealName(),
-                teachingClass.getCapacity()
-        );
+                teachingClass.getCapacity());
     }
 
     private TeacherProfileVO toTeacherProfileVO(TeacherProfile teacher) {
         SysUser user = teacher == null ? null : userMapper.selectById(teacher.getUserId());
-        College college = teacher == null || teacher.getCollegeId() == null ? null : collegeMapper.selectById(teacher.getCollegeId());
+        College college = teacher == null || teacher.getCollegeId() == null ? null
+                : collegeMapper.selectById(teacher.getCollegeId());
         return new TeacherProfileVO(
                 teacher == null ? null : teacher.getId(),
                 teacher == null ? "-" : teacher.getTeacherNo(),
                 user == null ? "-" : user.getRealName(),
                 college == null ? "-" : college.getName(),
                 teacher == null ? "-" : teacher.getDepartment(),
-                teacher == null ? "-" : teacher.getTitle()
-        );
+                teacher == null ? "-" : teacher.getTitle());
     }
 
     private StudentProfileVO toStudentProfileVO(StudentProfile student) {
         SysUser user = student == null ? null : userMapper.selectById(student.getUserId());
-        Major major = student == null || student.getMajorId() == null ? null : majorMapper.selectById(student.getMajorId());
-        AdminClass adminClass = student == null || student.getAdminClassId() == null ? null : adminClassMapper.selectById(student.getAdminClassId());
+        Major major = student == null || student.getMajorId() == null ? null
+                : majorMapper.selectById(student.getMajorId());
+        AdminClass adminClass = student == null || student.getAdminClassId() == null ? null
+                : adminClassMapper.selectById(student.getAdminClassId());
         College college = major == null ? null : collegeMapper.selectById(major.getCollegeId());
         return new StudentProfileVO(
                 student == null ? null : student.getId(),
@@ -691,8 +709,7 @@ public class TeachingService {
                 college == null ? "-" : college.getName(),
                 major == null ? student == null ? "-" : student.getMajor() : major.getName(),
                 adminClass == null ? student == null ? "-" : student.getClassName() : adminClass.getClassName(),
-                student == null ? null : student.getGradeYear()
-        );
+                student == null ? null : student.getGradeYear());
     }
 
     private EnrollmentVO toEnrollmentVO(TeachingClassStudent enrollment) {
@@ -705,8 +722,7 @@ public class TeachingService {
                 studentUser == null ? "-" : studentUser.getRealName(),
                 student == null ? "-" : student.getStudentNo(),
                 student == null ? "-" : student.getMajor(),
-                student == null ? "-" : student.getClassName()
-        );
+                student == null ? "-" : student.getClassName());
     }
 
     private GradeRecordVO toGradeVO(GradeRecord record) {
@@ -726,25 +742,28 @@ public class TeachingService {
                 studentUser == null ? "-" : studentUser.getRealName(),
                 record.getRegularScore(),
                 record.getFinalScore(),
-                record.getTotalScore()
-        );
+                record.getTotalScore());
     }
 
     private AttendanceRecordVO toAttendanceVO(AttendanceRecord record) {
         TeachingClass teachingClass = teachingClassMapper.selectById(record.getTeachingClassId());
         Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
         Semester semester = teachingClass == null ? null : semesterMapper.selectById(teachingClass.getSemesterId());
-        TeacherProfile teacher = teachingClass == null ? null : teacherProfileMapper.selectById(teachingClass.getTeacherId());
+        TeacherProfile teacher = teachingClass == null ? null
+                : teacherProfileMapper.selectById(teachingClass.getTeacherId());
         SysUser teacherUser = teacher == null ? null : userMapper.selectById(teacher.getUserId());
         StudentProfile student = studentProfileMapper.selectById(record.getStudentId());
         SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
-        AdminClass adminClass = student == null || student.getAdminClassId() == null ? null : adminClassMapper.selectById(student.getAdminClassId());
+        AdminClass adminClass = student == null || student.getAdminClassId() == null ? null
+                : adminClassMapper.selectById(student.getAdminClassId());
         Integer weekNo = semester == null ? null : resolveWeekNo(semester, record.getAttendanceDate());
         List<ClassSchedule> schedules = classScheduleMapper.selectList(new LambdaQueryWrapper<ClassSchedule>()
                 .eq(ClassSchedule::getTeachingClassId, record.getTeachingClassId()))
                 .stream()
-                .filter(item -> item.getDayOfWeek() != null && item.getDayOfWeek().equals(record.getAttendanceDate().getDayOfWeek().getValue()))
-                .filter(item -> weekNo == null || (item.getStartWeek() != null && item.getEndWeek() != null && weekNo >= item.getStartWeek() && weekNo <= item.getEndWeek()))
+                .filter(item -> item.getDayOfWeek() != null
+                        && item.getDayOfWeek().equals(record.getAttendanceDate().getDayOfWeek().getValue()))
+                .filter(item -> weekNo == null || (item.getStartWeek() != null && item.getEndWeek() != null
+                        && weekNo >= item.getStartWeek() && weekNo <= item.getEndWeek()))
                 .sorted(Comparator.comparing(ClassSchedule::getStartSection))
                 .toList();
         return new AttendanceRecordVO(
@@ -764,12 +783,12 @@ public class TeachingService {
                 joinClassrooms(schedules),
                 record.getStatus(),
                 attendanceStatusText(record.getStatus()),
-                record.getRemark()
-        );
+                record.getRemark());
     }
 
     private AcademicWarningVO toWarningVO(AcademicWarning warning) {
-        TeachingClass teachingClass = warning.getTeachingClassId() == null ? null : teachingClassMapper.selectById(warning.getTeachingClassId());
+        TeachingClass teachingClass = warning.getTeachingClassId() == null ? null
+                : teachingClassMapper.selectById(warning.getTeachingClassId());
         Course course = teachingClass == null ? null : courseMapper.selectById(teachingClass.getCourseId());
         StudentProfile student = studentProfileMapper.selectById(warning.getStudentId());
         SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
@@ -785,8 +804,7 @@ public class TeachingService {
                 counts.absentCount(),
                 counts.lateOrEarlyCount(),
                 warning.getReason(),
-                warning.getGeneratedTime()
-        );
+                warning.getGeneratedTime());
     }
 
     private WarningCounts warningCounts(Long teachingClassId, Long studentId) {
@@ -794,7 +812,9 @@ public class TeachingService {
                 .eq(AttendanceRecord::getTeachingClassId, teachingClassId)
                 .eq(AttendanceRecord::getStudentId, studentId));
         long absent = records.stream().filter(record -> "ABSENT".equals(record.getStatus())).count();
-        long lateOrEarly = records.stream().filter(record -> "LATE".equals(record.getStatus()) || "EARLY_LEAVE".equals(record.getStatus())).count();
+        long lateOrEarly = records.stream()
+                .filter(record -> "LATE".equals(record.getStatus()) || "EARLY_LEAVE".equals(record.getStatus()))
+                .count();
         return new WarningCounts(absent, lateOrEarly);
     }
 
@@ -855,7 +875,7 @@ public class TeachingService {
         }
         String semesterName = request.academicYear() + "-" + request.term();
         List<Long> semesterIds = semesterMapper.selectList(new LambdaQueryWrapper<Semester>()
-                        .eq(Semester::getName, semesterName))
+                .eq(Semester::getName, semesterName))
                 .stream()
                 .map(Semester::getId)
                 .toList();
@@ -867,7 +887,8 @@ public class TeachingService {
     }
 
     private Integer resolveWeekNo(Semester semester, LocalDate attendanceDate) {
-        if (semester.getStartDate() == null || attendanceDate == null || attendanceDate.isBefore(semester.getStartDate()) || attendanceDate.isAfter(semester.getEndDate())) {
+        if (semester.getStartDate() == null || attendanceDate == null
+                || attendanceDate.isBefore(semester.getStartDate()) || attendanceDate.isAfter(semester.getEndDate())) {
             return null;
         }
         return (int) ChronoUnit.WEEKS.between(semester.getStartDate(), attendanceDate) + 1;

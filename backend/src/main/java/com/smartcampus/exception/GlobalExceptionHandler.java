@@ -43,13 +43,14 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail(403, "无权限访问");
     }
 
+    // 捕获MySQL外键/唯一约束异常，转换为友好提示
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleDataIntegrity(DataIntegrityViolationException ex) {
         if (ex.getCause() instanceof SQLIntegrityConstraintViolationException sqlEx) {
             return switch (sqlEx.getErrorCode()) {
-                case 1451 -> ApiResponse.fail(400, "无法删除，该数据仍被其他记录引用");
-                case 1452 -> ApiResponse.fail(400, "操作失败，关联数据不存在");
+                case 1451 -> ApiResponse.fail(400, "无法删除，该数据仍被其他记录引用");  // 删除父记录时子表有引用
+                case 1452 -> ApiResponse.fail(400, "操作失败，关联数据不存在");          // 插入/更新时外键指向不存在的记录
                 default   -> ApiResponse.fail(400, "数据完整性约束违反");
             };
         }
