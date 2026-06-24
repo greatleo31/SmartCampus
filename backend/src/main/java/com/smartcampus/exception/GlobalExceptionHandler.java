@@ -4,6 +4,7 @@ import com.smartcampus.common.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.sql.SQLIntegrityConstraintViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -38,6 +41,20 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ApiResponse<Void> handleAccessDenied(AccessDeniedException ex) {
         return ApiResponse.fail(403, "无权限访问");
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleDataIntegrity(DataIntegrityViolationException ex) {
+        if (ex.getCause() instanceof SQLIntegrityConstraintViolationException sqlEx) {
+            return switch (sqlEx.getErrorCode()) {
+                case 1451 -> ApiResponse.fail(400, "无法删除，该数据仍被其他记录引用");
+                case 1452 -> ApiResponse.fail(400, "操作失败，关联数据不存在");
+                default   -> ApiResponse.fail(400, "数据完整性约束违反");
+            };
+        }
+        log.error("DataIntegrityViolation", ex);
+        return ApiResponse.fail(400, "数据完整性约束违反");
     }
 
     @ExceptionHandler(Exception.class)

@@ -108,6 +108,9 @@ public class AdminService {
     }
 
     public SysPermission savePermission(Long id, PermissionRequest request) {
+        if (roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getCode, request.roleCode())) == null) {
+            throw new BizException(404, "角色不存在");
+        }
         SysPermission permission = id == null ? new SysPermission() : requirePermission(id);
         permission.setCode(request.code());
         permission.setName(request.name());

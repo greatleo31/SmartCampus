@@ -45,12 +45,34 @@ export type Course = {
   hours: number
 }
 
+export type CoursePayload = {
+  code: string
+  name: string
+  aliasName?: string
+  collegeId?: number
+  credit: number
+  hours: number
+}
+
 export type TeachingClass = {
   id: number
+  classCode: string
+  semesterId: number
+  courseId: number
+  teacherId: number
   className: string
   semesterName: string
   courseName: string
   teacherName: string
+  capacity: number
+}
+
+export type TeachingClassPayload = {
+  classCode: string
+  className: string
+  semesterId: number
+  courseId: number
+  teacherId: number
   capacity: number
 }
 
@@ -86,6 +108,8 @@ export type Enrollment = {
 
 export type GradeRecord = {
   id: number
+  teachingClassId: number
+  studentId: number
   semesterName: string
   teachingClassName: string
   courseName: string
@@ -96,8 +120,17 @@ export type GradeRecord = {
   totalScore: number
 }
 
+export type GradePayload = {
+  teachingClassId: number
+  studentId: number
+  regularScore: number
+  finalScore: number
+}
+
 export type AttendanceRecord = {
   id: number
+  teachingClassId: number
+  studentId: number
   adminClassName: string
   studentNo: string
   studentName: string
@@ -111,6 +144,14 @@ export type AttendanceRecord = {
   classroom: string
   status: 'NORMAL' | 'LATE' | 'EARLY_LEAVE' | 'LEAVE' | 'ABSENT'
   statusText: string
+  remark?: string
+}
+
+export type AttendancePayload = {
+  teachingClassId: number
+  studentId: number
+  attendanceDate: string
+  status: AttendanceRecord['status']
   remark?: string
 }
 

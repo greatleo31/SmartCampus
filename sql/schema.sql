@@ -1,5 +1,6 @@
 CREATE DATABASE IF NOT EXISTS smart_campus DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 USE smart_campus;
+SET FOREIGN_KEY_CHECKS=0;
 
 DROP TABLE IF EXISTS academic_warning;
 DROP TABLE IF EXISTS attendance_record;
@@ -64,7 +65,8 @@ CREATE TABLE sys_permission (
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_sys_permission_code_role (code, role_code),
-  KEY idx_sys_permission_role (role_code)
+  KEY idx_sys_permission_role (role_code),
+  CONSTRAINT fk_sys_permission_role FOREIGN KEY (role_code) REFERENCES sys_role (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE sys_user_role (
@@ -76,7 +78,9 @@ CREATE TABLE sys_user_role (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_sys_user_role (user_id, role_id),
   KEY idx_sys_user_role_user (user_id),
-  KEY idx_sys_user_role_role (role_id)
+  KEY idx_sys_user_role_role (role_id),
+  CONSTRAINT fk_sys_user_role_user FOREIGN KEY (user_id) REFERENCES sys_user (id),
+  CONSTRAINT fk_sys_user_role_role FOREIGN KEY (role_id) REFERENCES sys_role (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE semester (
@@ -120,7 +124,8 @@ CREATE TABLE major (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_major_code (code),
   KEY idx_major_college (college_id),
-  KEY idx_major_deleted (deleted)
+  KEY idx_major_deleted (deleted),
+  CONSTRAINT fk_major_college FOREIGN KEY (college_id) REFERENCES college (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE admin_class (
@@ -134,7 +139,8 @@ CREATE TABLE admin_class (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_admin_class_name (class_name),
   KEY idx_admin_class_major (major_id),
-  KEY idx_admin_class_deleted (deleted)
+  KEY idx_admin_class_deleted (deleted),
+  CONSTRAINT fk_admin_class_major FOREIGN KEY (major_id) REFERENCES major (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE course (
@@ -152,7 +158,8 @@ CREATE TABLE course (
   KEY idx_course_college (college_id),
   KEY idx_course_name (name),
   KEY idx_course_alias_name (alias_name),
-  KEY idx_course_deleted (deleted)
+  KEY idx_course_deleted (deleted),
+  CONSTRAINT fk_course_college FOREIGN KEY (college_id) REFERENCES college (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE teacher_profile (
@@ -168,7 +175,9 @@ CREATE TABLE teacher_profile (
   UNIQUE KEY uk_teacher_user (user_id),
   UNIQUE KEY uk_teacher_no (teacher_no),
   KEY idx_teacher_college (college_id),
-  KEY idx_teacher_department (department)
+  KEY idx_teacher_department (department),
+  CONSTRAINT fk_teacher_profile_user FOREIGN KEY (user_id) REFERENCES sys_user (id),
+  CONSTRAINT fk_teacher_profile_college FOREIGN KEY (college_id) REFERENCES college (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE student_profile (
@@ -188,7 +197,10 @@ CREATE TABLE student_profile (
   KEY idx_student_major_id (major_id),
   KEY idx_student_admin_class (admin_class_id),
   KEY idx_student_major (major),
-  KEY idx_student_class (class_name)
+  KEY idx_student_class (class_name),
+  CONSTRAINT fk_student_profile_user FOREIGN KEY (user_id) REFERENCES sys_user (id),
+  CONSTRAINT fk_student_profile_major FOREIGN KEY (major_id) REFERENCES major (id),
+  CONSTRAINT fk_student_profile_admin_class FOREIGN KEY (admin_class_id) REFERENCES admin_class (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE teaching_class (
@@ -206,7 +218,10 @@ CREATE TABLE teaching_class (
   KEY idx_teaching_class_semester (semester_id),
   KEY idx_teaching_class_course (course_id),
   KEY idx_teaching_class_teacher (teacher_id),
-  KEY idx_teaching_class_deleted (deleted)
+  KEY idx_teaching_class_deleted (deleted),
+  CONSTRAINT fk_teaching_class_semester FOREIGN KEY (semester_id) REFERENCES semester (id),
+  CONSTRAINT fk_teaching_class_course FOREIGN KEY (course_id) REFERENCES course (id),
+  CONSTRAINT fk_teaching_class_teacher FOREIGN KEY (teacher_id) REFERENCES teacher_profile (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE teaching_class_student (
@@ -218,7 +233,9 @@ CREATE TABLE teaching_class_student (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_class_student (teaching_class_id, student_id),
   KEY idx_enrollment_class (teaching_class_id),
-  KEY idx_enrollment_student (student_id)
+  KEY idx_enrollment_student (student_id),
+  CONSTRAINT fk_tcs_class FOREIGN KEY (teaching_class_id) REFERENCES teaching_class (id),
+  CONSTRAINT fk_tcs_student FOREIGN KEY (student_id) REFERENCES student_profile (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE class_schedule (
@@ -236,7 +253,8 @@ CREATE TABLE class_schedule (
   deleted TINYINT NOT NULL DEFAULT 0,
   KEY idx_schedule_class (teaching_class_id),
   KEY idx_schedule_day_section (day_of_week, start_section),
-  KEY idx_schedule_deleted (deleted)
+  KEY idx_schedule_deleted (deleted),
+  CONSTRAINT fk_class_schedule_class FOREIGN KEY (teaching_class_id) REFERENCES teaching_class (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE grade_record (
@@ -252,7 +270,9 @@ CREATE TABLE grade_record (
   UNIQUE KEY uk_grade_class_student (teaching_class_id, student_id),
   KEY idx_grade_class (teaching_class_id),
   KEY idx_grade_student (student_id),
-  KEY idx_grade_total (total_score)
+  KEY idx_grade_total (total_score),
+  CONSTRAINT fk_grade_record_class FOREIGN KEY (teaching_class_id) REFERENCES teaching_class (id),
+  CONSTRAINT fk_grade_record_student FOREIGN KEY (student_id) REFERENCES student_profile (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE attendance_record (
@@ -269,7 +289,9 @@ CREATE TABLE attendance_record (
   KEY idx_attendance_class (teaching_class_id),
   KEY idx_attendance_student (student_id),
   KEY idx_attendance_date (attendance_date),
-  KEY idx_attendance_status (status)
+  KEY idx_attendance_status (status),
+  CONSTRAINT fk_attendance_class FOREIGN KEY (teaching_class_id) REFERENCES teaching_class (id),
+  CONSTRAINT fk_attendance_student FOREIGN KEY (student_id) REFERENCES student_profile (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE academic_warning (
@@ -286,7 +308,9 @@ CREATE TABLE academic_warning (
   KEY idx_warning_class (teaching_class_id),
   KEY idx_warning_student (student_id),
   KEY idx_warning_level (warning_level),
-  KEY idx_warning_status (status)
+  KEY idx_warning_status (status),
+  CONSTRAINT fk_warning_class FOREIGN KEY (teaching_class_id) REFERENCES teaching_class (id),
+  CONSTRAINT fk_warning_student FOREIGN KEY (student_id) REFERENCES student_profile (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE announcement (
@@ -306,7 +330,8 @@ CREATE TABLE announcement (
   KEY idx_announcement_category (category),
   KEY idx_announcement_status (status),
   KEY idx_announcement_publish (publish_time),
-  KEY idx_announcement_deleted (deleted)
+  KEY idx_announcement_deleted (deleted),
+  CONSTRAINT fk_announcement_publisher FOREIGN KEY (publisher_id) REFERENCES sys_user (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE system_config (
@@ -350,5 +375,7 @@ CREATE TABLE academic_calendar_day (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_calendar_day (calendar_id, calendar_date),
   KEY idx_calendar_day_date (calendar_date),
-  KEY idx_calendar_day_type (day_type)
+  KEY idx_calendar_day_type (day_type),
+  CONSTRAINT fk_calendar_day_calendar FOREIGN KEY (calendar_id) REFERENCES academic_calendar (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+SET FOREIGN_KEY_CHECKS=1;

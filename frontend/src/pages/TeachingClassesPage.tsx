@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Edit3, Plus, Trash2 } from 'lucide-react'
 import { campusApi } from '../api/campus'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -8,6 +8,9 @@ import { DataTable } from '../components/ui/DataTable'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { PaginationBar } from '../components/ui/PaginationBar'
+import type { TeachingClass, TeachingClassPayload } from '../types/api'
+
+const emptyForm = { classCode: '', className: '', semesterId: 0, courseId: 0, teacherId: 0, capacity: 60 }
 
 export function TeachingClassesPage() {
   const qc = useQueryClient()
@@ -19,15 +22,17 @@ export function TeachingClassesPage() {
   const { data: courses } = useQuery({ queryKey: ['courses'], queryFn: () => campusApi.courses() })
   const { data: teachers = [] } = useQuery({ queryKey: ['teachers'], queryFn: campusApi.teachers })
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ className: '', semesterId: 0, courseId: 0, teacherId: 0, capacity: 60 })
+  const [editing, setEditing] = useState<TeachingClass | null>(null)
+  const [form, setForm] = useState(emptyForm)
   const [courseKeyword, setCourseKeyword] = useState('')
   const [teacherKeyword, setTeacherKeyword] = useState('')
-  const create = useMutation({
-    mutationFn: campusApi.createTeachingClass,
+  const save = useMutation({
+    mutationFn: (payload: TeachingClassPayload) => editing ? campusApi.updateTeachingClass(editing.id, payload) : campusApi.createTeachingClass(payload),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['teachingClasses'] })
       setOpen(false)
-      setForm({ className: '', semesterId: 0, courseId: 0, teacherId: 0, capacity: 60 })
+      setEditing(null)
+      setForm(emptyForm)
       setCourseKeyword('')
       setTeacherKeyword('')
     },
@@ -41,15 +46,38 @@ export function TeachingClassesPage() {
   const selectedCourseId = form.courseId || filteredCourses[0]?.id || courseOptions[0]?.id || 0
   const selectedTeacherId = form.teacherId || filteredTeachers[0]?.id || teachers[0]?.id || 0
 
+  function openCreate() {
+    setEditing(null)
+    setForm(emptyForm)
+    setCourseKeyword('')
+    setTeacherKeyword('')
+    setOpen(true)
+  }
+
+  function openEdit(item: TeachingClass) {
+    setEditing(item)
+    setForm({
+      classCode: item.classCode,
+      className: item.className,
+      semesterId: item.semesterId,
+      courseId: item.courseId,
+      teacherId: item.teacherId,
+      capacity: item.capacity,
+    })
+    setCourseKeyword('')
+    setTeacherKeyword('')
+    setOpen(true)
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault()
     if (!selectedSemesterId || !selectedCourseId || !selectedTeacherId) return
-    create.mutate({
+    save.mutate({
       ...form,
       semesterId: selectedSemesterId,
       courseId: selectedCourseId,
       teacherId: selectedTeacherId,
-      classCode: generateClassCode(),
+      classCode: form.classCode || generateClassCode(),
     })
   }
 
@@ -57,7 +85,7 @@ export function TeachingClassesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-[#172235]">教学班管理</h1>
-        <Button onClick={() => setOpen(true)}><Plus size={16} />新增教学班</Button>
+        <Button onClick={openCreate}><Plus size={16} />新增教学班</Button>
       </div>
       <Card className="p-5">
         <div className="mb-4 max-w-sm">
@@ -74,12 +102,12 @@ export function TeachingClassesPage() {
             { key: 'courseName', title: '课程' },
             { key: 'teacherName', title: '教师' },
             { key: 'capacity', title: '容量' },
-            { key: 'id', title: '操作', render: (row) => <Button variant="danger" onClick={() => window.confirm('确认删除该教学班？') && remove.mutate(Number(row.id))}>删除</Button> },
+            { key: 'id', title: '操作', render: (row) => <div className="flex gap-2"><Button variant="secondary" onClick={() => openEdit(row as unknown as TeachingClass)}><Edit3 size={16} />编辑</Button><Button variant="danger" onClick={() => window.confirm('确认删除该教学班？') && remove.mutate(Number(row.id))}><Trash2 size={16} />删除</Button></div> },
           ]}
         />
         <PaginationBar total={data?.total ?? 0} page={data?.page ?? page} size={data?.size ?? size} onPageChange={setPage} onSizeChange={(next) => { setSize(next); setPage(1) }} />
       </Card>
-      <Modal open={open} title="新增教学班" onClose={() => setOpen(false)}>
+      <Modal open={open} title={editing ? '编辑教学班' : '新增教学班'} onClose={() => setOpen(false)}>
         <form className="grid gap-4 md:grid-cols-2" onSubmit={submit}>
           <Field label="教学班名称"><Input value={form.className} onChange={(e) => setForm({ ...form, className: e.target.value })} required /></Field>
           <Field label="学期"><select className={inputClass} value={selectedSemesterId} onChange={(e) => setForm({ ...form, semesterId: Number(e.target.value) })} required>{semesterOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
@@ -100,7 +128,7 @@ export function TeachingClassesPage() {
             </div>
           </Field>
           <Field label="容量"><Input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} required /></Field>
-          <div className="md:col-span-2"><Button type="submit" disabled={create.isPending}>保存</Button></div>
+          <div className="md:col-span-2"><Button type="submit" disabled={save.isPending}>保存</Button></div>
         </form>
       </Modal>
     </div>

@@ -156,6 +156,9 @@ public class CatalogService {
     }
 
     public Course saveCourse(Long id, CourseRequest request) {
+        if (request.collegeId() != null && collegeMapper.selectById(request.collegeId()) == null) {
+            throw new BizException(404, "学院不存在");
+        }
         Course course = id == null ? new Course() : requireCourse(id);
         course.setCode(request.code());
         course.setName(request.name());

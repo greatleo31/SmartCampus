@@ -654,6 +654,10 @@ public class TeachingService {
         SysUser teacherUser = teacher == null ? null : userMapper.selectById(teacher.getUserId());
         return new TeachingClassVO(
                 teachingClass.getId(),
+                teachingClass.getClassCode(),
+                teachingClass.getSemesterId(),
+                teachingClass.getCourseId(),
+                teachingClass.getTeacherId(),
                 teachingClass.getClassName(),
                 semester == null ? "-" : semester.getName(),
                 course == null ? "-" : course.getName(),
@@ -713,6 +717,8 @@ public class TeachingService {
         SysUser studentUser = student == null ? null : userMapper.selectById(student.getUserId());
         return new GradeRecordVO(
                 record.getId(),
+                record.getTeachingClassId(),
+                record.getStudentId(),
                 semester == null ? "-" : semester.getName(),
                 teachingClass == null ? "-" : teachingClass.getClassName(),
                 course == null ? "-" : course.getName(),
@@ -743,6 +749,8 @@ public class TeachingService {
                 .toList();
         return new AttendanceRecordVO(
                 record.getId(),
+                record.getTeachingClassId(),
+                record.getStudentId(),
                 adminClass == null ? student == null ? "-" : student.getClassName() : adminClass.getClassName(),
                 student == null ? "-" : student.getStudentNo(),
                 studentUser == null ? "-" : studentUser.getRealName(),

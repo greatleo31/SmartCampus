@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 public record AttendanceRecordVO(
         Long id,
+        Long teachingClassId,
+        Long studentId,
         String adminClassName,
         String studentNo,
         String studentName,

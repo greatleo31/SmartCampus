@@ -31,24 +31,23 @@ public class LocalCacheService {
     private final Cache<String, Object> shortCache = Caffeine.newBuilder()
             .initialCapacity(256)
             .maximumSize(5_000)
-            .expireAfterWrite(Duration.ofMinutes(1))
+            .expireAfterWrite(Duration.ofMinutes(10))
             .build();
     private final Cache<String, Object> normalCache = Caffeine.newBuilder()
             .initialCapacity(512)
             .maximumSize(10_000)
-            .expireAfterWrite(Duration.ofMinutes(5))
+            .expireAfterWrite(Duration.ofMinutes(30))
             .build();
     private final Cache<String, Object> longCache = Caffeine.newBuilder()
             .initialCapacity(256)
             .maximumSize(5_000)
-            .expireAfterWrite(Duration.ofMinutes(30))
+            .expireAfterWrite(Duration.ofMinutes(59))
             .build();
 
     @Autowired
     public LocalCacheService(
             ObjectMapper objectMapper,
-            ObjectProvider<RedisTemplate<String, Object>> redisTemplateProvider
-    ) {
+            ObjectProvider<RedisTemplate<String, Object>> redisTemplateProvider) {
         this.objectMapper = objectMapper;
         this.redisTemplateProvider = redisTemplateProvider;
     }
